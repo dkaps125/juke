@@ -29,9 +29,9 @@ var (
 		{
 			Role: "system",
 			Content: strings.TrimSpace(`
-You are a music expert. Be as succinct as possible, and prioritize tool use over text.
-You should suggest specific songs whenever possible, and prioritize songs that are not the same as what the user is currently listening to.
-If a specific song is requested, prioritizing playing that song.
+You are a music expert. Your job is to return formatted song titles and artists, incorporating previously played tracks and user sentiment in your suggestions.
+
+Be as succinct as possible, and prioritize tool use over text.
 		`),
 		},
 	}
@@ -71,9 +71,19 @@ func NewOllamaEngine(opts OllamaOptions) Engine {
 func (e OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song music.Song)) {
 	var prompt string
 	if currentSong == nil {
-		prompt = fmt.Sprintf("I'm listening to music. Play my next song based on the following criteria: %s", userPrompt)
+		prompt = strings.TrimSpace(fmt.Sprintf(`
+	I'm listening to music. Here is my request for my next song: %s. Provide a reason why you're suggesting this song.
+	Suggest songs in this order:
+1. A song specifically requested by the user. In this case, ignore the currently playing song.
+2. A song different from what the user is currently listening to, taking previously heard tracks and user sentiment into account.
+		`, userPrompt))
 	} else {
-		prompt = fmt.Sprintf("I'm listening to music. My current song is %s by %s. Play my next song based on the following criteria: %s. Provide a reason why you're suggesting this song.", currentSong.Title, currentSong.Artist, userPrompt)
+		prompt = strings.TrimSpace(fmt.Sprintf(`
+	I'm listening to music. My current song is %s by %s. Here is my request for my next song: %s. Provide a reason why you're suggesting this song.
+	Suggest songs in this order:
+1. A song specifically requested by the user. In this case, ignore the currently playing song.
+2. A song different from what the user is currently listening to, taking previously heard tracks and user sentiment into account.
+		`, currentSong.Title, currentSong.Artist, userPrompt))
 	}
 
 	e.messages = append(e.messages, api.Message{
@@ -87,7 +97,7 @@ func (e OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, call
 		Model:    e.modelName,
 		Messages: e.messages,
 		Stream:   &stream,
-		Options:  map[string]any{"temperature": 0.9, "top_p": 0.9},
+		Options:  map[string]any{"temperature": 0.2, "top_p": 0.9},
 
 		// Use structured outputs to support models without tool calling
 		Format: format,
@@ -99,6 +109,8 @@ func (e OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, call
 			Role:    "assistant",
 			Content: content,
 		})
+
+		fmt.Printf("Returned song: %s\n", content)
 
 		var song music.Song
 		json.Unmarshal([]byte(content), &song)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -104,6 +105,8 @@ func (s Spotify) CurrentState() PlayerState {
 
 func (s *Spotify) completeAuth(srv *http.Server) func(w http.ResponseWriter, r *http.Request) {
 	auth := spotifyauth.New(
+		spotifyauth.WithClientID(os.Getenv("SPOTIFY_ID")),
+		spotifyauth.WithClientSecret(os.Getenv("SPOTIFY_SECRET")),
 		spotifyauth.WithRedirectURL(redirectURI),
 		spotifyauth.WithScopes(spotifyauth.ScopeUserReadCurrentlyPlaying, spotifyauth.ScopeUserReadPlaybackState, spotifyauth.ScopeUserModifyPlaybackState),
 	)
