@@ -73,8 +73,8 @@ func (a App) InitializeMenubar() {
 						a.llm.PromptLLM(prompt, &music.Song{
 							Title:  menuet.Defaults().String("nowPlayingSong"),
 							Artist: menuet.Defaults().String("nowPlayingArtist"),
-						}, func(song music.Song) {
-							a.music.SearchAndPlaySong(song)
+						}, func(songs []music.Song) {
+							a.music.SearchAndPlaySongs(songs)
 						})
 					}
 				},

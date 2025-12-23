@@ -31,25 +31,28 @@ var (
 			Content: strings.TrimSpace(`
 You are a music expert. Your job is to return formatted song titles and artists, incorporating previously played tracks and user sentiment in your suggestions.
 
-Be as succinct as possible, and prioritize tool use over text.
+Be as succinct as possible, and prioritize tool use over text. Return as many songs as are applicable.
 		`),
 		},
 	}
 	stream    = false
 	format, _ = json.Marshal(map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"Reason": map[string]string{
-				"type": "string",
+		"type": "array",
+		"items": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"Reason": map[string]string{
+					"type": "string",
+				},
+				"Title": map[string]string{
+					"type": "string",
+				},
+				"Artist": map[string]string{
+					"type": "string",
+				},
 			},
-			"Title": map[string]string{
-				"type": "string",
-			},
-			"Artist": map[string]string{
-				"type": "string",
-			},
+			"required": []string{"Title", "Artist"},
 		},
-		"required": []string{"Title", "Artist"},
 	})
 )
 
@@ -68,21 +71,21 @@ func NewOllamaEngine(opts OllamaOptions) Engine {
 }
 
 // PromptLLM does what it says
-func (e OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song music.Song)) {
+func (e OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
 	var prompt string
 	if currentSong == nil {
 		prompt = strings.TrimSpace(fmt.Sprintf(`
-	I'm listening to music. Here is my request for my next song: %s. Provide a reason why you're suggesting this song.
+	I'm listening to music. Here is my request for my next songs: %s. Provide a reason why you're suggesting these songs.
 	Suggest songs in this order:
-1. A song specifically requested by the user. In this case, ignore the currently playing song.
-2. A song different from what the user is currently listening to, taking previously heard tracks and user sentiment into account.
+1. Songs specifically requested by the user. In this case, ignore the currently playing song.
+2. Songs different from what the user is currently listening to, taking previously heard tracks and user sentiment into account.
 		`, userPrompt))
 	} else {
 		prompt = strings.TrimSpace(fmt.Sprintf(`
-	I'm listening to music. My current song is %s by %s. Here is my request for my next song: %s. Provide a reason why you're suggesting this song.
+	I'm listening to music. My current song is %s by %s. Here is my request for my next songs: %s. Provide a reason why you're suggesting these songs.
 	Suggest songs in this order:
-1. A song specifically requested by the user. In this case, ignore the currently playing song.
-2. A song different from what the user is currently listening to, taking previously heard tracks and user sentiment into account.
+1. Songs specifically requested by the user. In this case, ignore the currently playing song.
+2. Songs different from what the user is currently listening to, taking previously heard tracks and user sentiment into account.
 		`, currentSong.Title, currentSong.Artist, userPrompt))
 	}
 
@@ -110,12 +113,12 @@ func (e OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, call
 			Content: content,
 		})
 
-		fmt.Printf("Returned song: %s\n", content)
+		fmt.Printf("Returned songs: %s\n", content)
 
-		var song music.Song
-		json.Unmarshal([]byte(content), &song)
+		var songs []music.Song
+		json.Unmarshal([]byte(content), &songs)
 
-		callback(song)
+		callback(songs)
 		return nil
 	}
 

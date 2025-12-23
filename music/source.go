@@ -14,7 +14,7 @@ type PlayerState struct {
 // Source is a source for streaming music and music data
 type Source interface {
 	Authenticate()
-	SearchAndPlaySong(song Song)
+	SearchAndPlaySongs(songs []Song)
 	Previous()
 	Pause()
 	Play()
