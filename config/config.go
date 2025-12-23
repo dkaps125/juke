@@ -13,7 +13,8 @@ type Config struct {
 }
 
 const (
-	OLLAMA LLMProvider = iota
+	OLLAMA     LLMProvider = iota
+	OPENROUTER LLMProvider = iota
 )
 
 const (
@@ -22,7 +23,8 @@ const (
 
 var (
 	providers = map[string]LLMProvider{
-		"ollama": OLLAMA,
+		"ollama":     OLLAMA,
+		"openrouter": OPENROUTER,
 	}
 	sources = map[string]MusicSource{
 		"spotify": SPOTIFY,

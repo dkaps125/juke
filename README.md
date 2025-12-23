@@ -11,7 +11,7 @@ Juke supports configurations for:
 Configuration should be set to environment variables or in a `.env` file. Options are as follows.
 
 ```
-LLM_PROVIDER = "ollama"
+LLM_PROVIDER = "ollama" | "openrouter"
 MUSIC_SOURCE = "spotify
 MODEL_NAME = "" # any model name supported by the LLM provider
 ```
@@ -33,5 +33,6 @@ Obviously bigger is better here; use whatever model works best for you on your h
 
 Ollama's endpoint can be customized by setting the `OLLAMA_HOST` env var in the form `<scheme>://<host>:<port>`.
 
-### Cloud
+### Openrouter
 
+Openrouter exposes an extensive model catalog through one interface. Set `OPENROUTER_API_KEY` in your environment to authenticate.

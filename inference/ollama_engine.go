@@ -25,7 +25,7 @@ type OllamaEngine struct {
 }
 
 var (
-	defaultMessages = []api.Message{
+	ollamaDefaultMessages = []api.Message{
 		{
 			Role: "system",
 			Content: strings.TrimSpace(`
@@ -35,8 +35,8 @@ Be as succinct as possible, and prioritize tool use over text. Return as many so
 		`),
 		},
 	}
-	stream    = false
-	format, _ = json.Marshal(map[string]any{
+	stream          = false
+	ollamaFormat, _ = json.Marshal(map[string]any{
 		"type": "array",
 		"items": map[string]any{
 			"type": "object",
@@ -65,7 +65,7 @@ func NewOllamaEngine(opts OllamaOptions) Engine {
 
 	return OllamaEngine{
 		client:    client,
-		messages:  slices.Clone(defaultMessages),
+		messages:  slices.Clone(ollamaDefaultMessages),
 		modelName: opts.ModelName,
 	}
 }
@@ -103,7 +103,7 @@ func (e OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, call
 		Options:  map[string]any{"temperature": 0.2, "top_p": 0.9},
 
 		// Use structured outputs to support models without tool calling
-		Format: format,
+		Format: ollamaFormat,
 	}
 
 	respFunc := func(resp api.ChatResponse) error {

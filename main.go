@@ -36,6 +36,10 @@ func GetLLMEngine(conf config.Config) inference.Engine {
 		return inference.NewOllamaEngine(inference.OllamaOptions{
 			ModelName: conf.ModelName,
 		})
+	case config.OPENROUTER:
+		return inference.NewOpenrouterEngine(inference.OpenrouterOptions{
+			ModelName: conf.ModelName,
+		})
 	default:
 		return inference.NewOllamaEngine(inference.OllamaOptions{
 			ModelName: conf.ModelName,

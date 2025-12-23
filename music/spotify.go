@@ -38,7 +38,7 @@ func (s *Spotify) Authenticate() {
 }
 
 func (s *Spotify) searchSong(song Song) (*spotify.URI, bool) {
-	results, err := s.client.Search(context.Background(), fmt.Sprintf("%s %s", song.Title, song.Artist), spotify.SearchTypeTrack)
+	results, err := s.client.Search(context.Background(), fmt.Sprintf("track:%s artist:%s", song.Title, song.Artist), spotify.SearchTypeTrack)
 	if err != nil {
 		log.Println(err.Error())
 		return nil, false
