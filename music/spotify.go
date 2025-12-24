@@ -14,7 +14,7 @@ import (
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
 
-const redirectURI = "http://127.0.0.1:8080/callback" // TODO: make configurable?
+var redirectURI = os.Getenv("REDIRECT_URI") // TODO: make configurable?
 
 type Spotify struct {
 	client *spotify.Client
