@@ -7,6 +7,7 @@ toolchain go1.24.11
 require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/apache/arrow/go/arrow v0.0.0-20211112161151-bc219186db40 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/caseymrm/askm v1.0.0 // indirect
@@ -15,6 +16,7 @@ require (
 	github.com/chewxy/math32 v1.11.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
+	github.com/conneroisu/groq-go v0.9.5 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/d4l3k/go-bfloat16 v0.0.0-20211005043715-690c3bdd05f1 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect

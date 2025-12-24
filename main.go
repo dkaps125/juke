@@ -40,6 +40,10 @@ func GetLLMEngine(conf config.Config) inference.Engine {
 		return inference.NewOpenrouterEngine(inference.OpenrouterOptions{
 			ModelName: conf.ModelName,
 		})
+	case config.GROQ:
+		return inference.NewGroqEngine(inference.GroqOptions{
+			ModelName: conf.ModelName,
+		})
 	default:
 		return inference.NewOllamaEngine(inference.OllamaOptions{
 			ModelName: conf.ModelName,
@@ -51,13 +55,13 @@ func main() {
 	config := config.GetConfig()
 
 	// TODO: genericize
-	spotify := GetMusicSource(config)
-	spotify.Authenticate()
+	musicSource := GetMusicSource(config)
+	musicSource.Authenticate()
 
 	llm := GetLLMEngine(config)
 
 	app := App{
-		music: spotify,
+		music: musicSource,
 		llm:   llm,
 	}
 

@@ -11,7 +11,7 @@ Juke supports configurations for:
 Configuration should be set to environment variables or in a `.env` file. Options are as follows.
 
 ```
-LLM_PROVIDER = "ollama" | "openrouter"
+LLM_PROVIDER = "ollama" | "openrouter" | "groq"
 MUSIC_SOURCE = "spotify
 MODEL_NAME = "" # any model name supported by the LLM provider
 ```
@@ -35,4 +35,8 @@ Ollama's endpoint can be customized by setting the `OLLAMA_HOST` env var in the 
 
 ### Openrouter
 
-Openrouter exposes an extensive model catalog through one interface. Set `OPENROUTER_API_KEY` in your environment to authenticate.
+[Openrouter](https://openrouter.ai) exposes an extensive model catalog through one interface. Set `OPENROUTER_API_KEY` in your environment to authenticate.
+
+### Groq
+
+[Groq](https://groq.com) supports fast inference and a few solid models. Set `GROQ_API_KEY` in your environment to authenticate.

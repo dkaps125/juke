@@ -8,45 +8,48 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/conneroisu/groq-go"
+	"github.com/conneroisu/groq-go/pkg/schema"
 	"github.com/dkaps125/juke/music"
-	"github.com/revrost/go-openrouter"
-	"github.com/revrost/go-openrouter/jsonschema"
 )
 
 var (
-	openrouterDefaultMessages = []openrouter.ChatCompletionMessage{
-		openrouter.SystemMessage(strings.TrimSpace(`
+	groqDefaultMessages = []groq.ChatCompletionMessage{
+		{
+			Role: groq.RoleSystem,
+			Content: strings.TrimSpace(`
 You are a music expert. Your job is to return formatted song titles and artists, incorporating previously played tracks and user sentiment in your suggestions.
 
 Be as succinct as possible, and prioritize tool use over text. Return as many songs as are applicable.
-		`)),
+		`),
+		},
 	}
-	openrouterFormat, _ = jsonschema.GenerateSchemaForType(outputType)
+	groqFormat, _ = schema.ReflectSchema(outputType)
 )
 
-type OpenrouterOptions struct {
+type GroqOptions struct {
 	ModelName string
 }
 
-type OpenrouterEngine struct {
-	client    *openrouter.Client
-	messages  []openrouter.ChatCompletionMessage
+type GroqEngine struct {
+	client    *groq.Client
+	messages  []groq.ChatCompletionMessage
 	modelName string
 }
 
-func NewOpenrouterEngine(opts OpenrouterOptions) OpenrouterEngine {
-	client := openrouter.NewClient(
-		os.Getenv("OPENROUTER_API_KEY"),
+func NewGroqEngine(opts GroqOptions) GroqEngine {
+	client, _ := groq.NewClient(
+		os.Getenv("GROQ_API_KEY"),
 	)
 
-	return OpenrouterEngine{
+	return GroqEngine{
 		client:    client,
 		modelName: opts.ModelName,
-		messages:  slices.Clone(openrouterDefaultMessages),
+		messages:  slices.Clone(groqDefaultMessages),
 	}
 }
 
-func (e OpenrouterEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
+func (e GroqEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
 	var prompt string
 	if currentSong == nil {
 		prompt = strings.TrimSpace(fmt.Sprintf(`
@@ -64,20 +67,23 @@ func (e OpenrouterEngine) PromptLLM(userPrompt string, currentSong *music.Song, 
 		`, currentSong.Title, currentSong.Artist, userPrompt))
 	}
 
-	e.messages = append(e.messages, openrouter.UserMessage(prompt))
-	resp, err := e.client.CreateChatCompletion(
+	e.messages = append(e.messages, groq.ChatCompletionMessage{
+		Content: prompt,
+		Role:    groq.RoleUser,
+	})
+	resp, err := e.client.ChatCompletion(
 		context.Background(),
-		openrouter.ChatCompletionRequest{
-			Model:       e.modelName,
+		groq.ChatCompletionRequest{
+			Model:       groq.ChatModel(e.modelName),
 			Temperature: 0.2,
 			TopP:        0.9,
 			Messages:    e.messages,
-			ResponseFormat: &openrouter.ChatCompletionResponseFormat{
-				Type: openrouter.ChatCompletionResponseFormatTypeJSONSchema,
-				JSONSchema: &openrouter.ChatCompletionResponseFormatJSONSchema{
+			ResponseFormat: &groq.ChatResponseFormat{
+				Type: groq.FormatJSONSchema,
+				JSONSchema: &groq.JSONSchema{
 					Name:   "songs",
-					Schema: openrouterFormat,
-					Strict: true,
+					Schema: *groqFormat,
+					Strict: false,
 				},
 			},
 		},
@@ -88,9 +94,12 @@ func (e OpenrouterEngine) PromptLLM(userPrompt string, currentSong *music.Song, 
 		return
 	}
 
-	content := resp.Choices[0].Message.Content.Text
+	content := resp.Choices[0].Message.Content
 	fmt.Printf("Returned songs: %s\n", content)
-	e.messages = append(e.messages, openrouter.AssistantMessage(content))
+	e.messages = append(e.messages, groq.ChatCompletionMessage{
+		Content: content,
+		Role:    groq.RoleAssistant,
+	})
 
 	var songs []music.Song
 	json.Unmarshal([]byte(content), &songs)
