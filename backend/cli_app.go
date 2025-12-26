@@ -1,12 +1,21 @@
 package main
 
 import (
+	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/caseymrm/menuet"
+	"github.com/dkaps125/juke/config"
 	"github.com/dkaps125/juke/inference"
 	"github.com/dkaps125/juke/music"
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	runtime.LockOSThread()
+	godotenv.Load()
+}
 
 // App is the main app object
 type App struct {
@@ -126,4 +135,54 @@ func (a App) Run() {
 
 	a.startUpdates()
 	menuet.App().RunApplication()
+}
+
+func GetMusicSource(conf config.Config) music.Source {
+	switch conf.MusicSource {
+	case config.SPOTIFY:
+		return music.NewSpotify()
+	default:
+		return music.NewSpotify()
+	}
+}
+
+func GetLLMEngine(conf config.Config) inference.Engine {
+	switch conf.LLMProvider {
+	case config.OLLAMA:
+		return inference.NewOllamaEngine(inference.OllamaOptions{
+			ModelName: conf.ModelName,
+		})
+	case config.OPENROUTER:
+		return inference.NewOpenrouterEngine(inference.OpenrouterOptions{
+			ModelName: conf.ModelName,
+		})
+	case config.GROQ:
+		return inference.NewGroqEngine(inference.GroqOptions{
+			ModelName: conf.ModelName,
+		})
+	default:
+		return inference.NewOllamaEngine(inference.OllamaOptions{
+			ModelName: conf.ModelName,
+		})
+	}
+}
+
+func main() {
+	config := config.GetConfig()
+
+	fmt.Println(config)
+
+	// TODO: genericize
+	musicSource := GetMusicSource(config)
+	musicSource.Authenticate()
+
+	llm := GetLLMEngine(config)
+
+	app := App{
+		music: musicSource,
+		llm:   llm,
+	}
+
+	app.InitializeMenubar()
+	app.Run()
 }

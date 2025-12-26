@@ -37,28 +37,26 @@ func (s *Spotify) Authenticate() {
 	srv.ListenAndServe()
 }
 
-func (s *Spotify) searchSong(song Song) (*spotify.URI, bool) {
+func (s *Spotify) searchSong(song Song) (*spotify.ID, bool) {
 	results, err := s.client.Search(context.Background(), fmt.Sprintf("track:%s artist:%s", song.Title, song.Artist), spotify.SearchTypeTrack)
 	if err != nil {
 		log.Println(err.Error())
 		return nil, false
 	}
 
-	return &results.Tracks.Tracks[0].URI, true
+	if results.Tracks == nil || results.Tracks.Tracks == nil || len(results.Tracks.Tracks) == 0 {
+		return nil, false
+	}
+
+	return &results.Tracks.Tracks[0].ID, true
 }
 
 func (s *Spotify) SearchAndPlaySongs(songs []Song) {
-	var uris = make([]spotify.URI, 0)
-
 	for _, song := range songs {
-		if uri, ok := s.searchSong(song); ok {
-			uris = append(uris, *uri)
+		if id, ok := s.searchSong(song); ok {
+			s.client.QueueSong(context.Background(), *id)
 		}
 	}
-
-	s.client.PlayOpt(context.Background(), &spotify.PlayOptions{
-		URIs: uris,
-	})
 }
 
 func (s Spotify) Pause() {
