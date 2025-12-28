@@ -29,19 +29,19 @@ type OpenrouterEngine struct {
 	modelName string
 }
 
-func NewOpenrouterEngine(opts OpenrouterOptions) OpenrouterEngine {
+func NewOpenrouterEngine(opts OpenrouterOptions) *OpenrouterEngine {
 	client := openrouter.NewClient(
 		os.Getenv("OPENROUTER_API_KEY"),
 	)
 
-	return OpenrouterEngine{
+	return &OpenrouterEngine{
 		client:    client,
 		modelName: opts.ModelName,
 		messages:  slices.Clone(openrouterDefaultMessages),
 	}
 }
 
-func (e OpenrouterEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
+func (e *OpenrouterEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
 	prompt := getPrompt(userPrompt, currentSong)
 
 	e.messages = append(e.messages, openrouter.UserMessage(prompt))

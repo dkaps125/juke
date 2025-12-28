@@ -52,13 +52,13 @@ var (
 )
 
 // NewOllamaEngine creates a new inference engine backed by Ollama
-func NewOllamaEngine(opts OllamaOptions) Engine {
+func NewOllamaEngine(opts OllamaOptions) *OllamaEngine {
 	client, err := api.ClientFromEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return OllamaEngine{
+	return &OllamaEngine{
 		client:    client,
 		messages:  slices.Clone(ollamaDefaultMessages),
 		modelName: opts.ModelName,
@@ -66,7 +66,7 @@ func NewOllamaEngine(opts OllamaOptions) Engine {
 }
 
 // PromptLLM does what it says
-func (e OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
+func (e *OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
 	prompt := getPrompt(userPrompt, currentSong)
 
 	e.messages = append(e.messages, api.Message{

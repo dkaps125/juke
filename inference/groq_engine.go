@@ -32,19 +32,19 @@ type GroqEngine struct {
 	modelName string
 }
 
-func NewGroqEngine(opts GroqOptions) GroqEngine {
+func NewGroqEngine(opts GroqOptions) *GroqEngine {
 	client, _ := groq.NewClient(
 		os.Getenv("GROQ_API_KEY"),
 	)
 
-	return GroqEngine{
+	return &GroqEngine{
 		client:    client,
 		modelName: opts.ModelName,
 		messages:  slices.Clone(groqDefaultMessages),
 	}
 }
 
-func (e GroqEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
+func (e *GroqEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
 	prompt := getPrompt(userPrompt, currentSong)
 
 	e.messages = append(e.messages, groq.ChatCompletionMessage{
@@ -82,7 +82,14 @@ func (e GroqEngine) PromptLLM(userPrompt string, currentSong *music.Song, callba
 	})
 
 	var songs []music.Song
-	json.Unmarshal([]byte(content), &songs)
+	err = json.Unmarshal([]byte(content), &songs)
+
+	// A little defensive programming, in case the LLM returns a single Song object instead of a list
+	if err != nil {
+		var song music.Song
+		json.Unmarshal([]byte(content), &song)
+		songs = []music.Song{song}
+	}
 
 	callback(songs)
 }
