@@ -29,12 +29,15 @@ func NewSpotify() *Spotify {
 	return &Spotify{}
 }
 
-func (s *Spotify) Authenticate() {
+func (s *Spotify) Authenticate() chan (bool) {
 	srv := &http.Server{Addr: fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))}
 
-	http.HandleFunc("/callback", s.completeAuth(srv))
+	handler, channel := s.completeAuth(srv)
+	http.HandleFunc("/callback", handler)
 
-	srv.ListenAndServe()
+	go srv.ListenAndServe()
+
+	return channel
 }
 
 func (s *Spotify) searchSong(song Song) (*spotify.ID, bool) {
@@ -59,6 +62,23 @@ func (s *Spotify) SearchAndPlaySongs(songs []Song) {
 	}
 }
 
+func (s *Spotify) getQueue() []Song {
+	queue, _ := s.client.GetQueue(context.Background())
+	if queue == nil || len(queue.Items) == 0 {
+		return nil
+	}
+
+	var songs []Song
+	for _, song := range queue.Items {
+		songs = append(songs, Song{
+			Title:  song.Name,
+			Artist: artistsToString(song.Artists),
+		})
+	}
+
+	return songs
+}
+
 func (s Spotify) Pause() {
 	s.client.Pause(context.Background())
 }
@@ -75,6 +95,16 @@ func (s Spotify) Previous() {
 	s.client.Previous(context.Background())
 }
 
+func artistsToString(artists []spotify.SimpleArtist) string {
+	artistNames := make([]string, len(artists))
+	for i, artist := range artists {
+		artistNames[i] = artist.Name
+	}
+
+	return strings.Join(artistNames, ", ")
+}
+
+// TODO: look at combining into a single GetQueue call
 func (s Spotify) CurrentState() PlayerState {
 	if s.client == nil {
 		return PlayerState{
@@ -94,30 +124,27 @@ func (s Spotify) CurrentState() PlayerState {
 
 	var currentSong *Song = nil
 	if curr.Item != nil {
-		artistNames := make([]string, len(curr.Item.Artists))
-		for i, artist := range curr.Item.Artists {
-			artistNames[i] = artist.Name
-		}
-
 		currentSong = &Song{
 			Title:  curr.Item.Name,
-			Artist: strings.Join(artistNames, ", "),
+			Artist: artistsToString(curr.Item.Artists),
 		}
 	}
 
 	return PlayerState{
 		CurrentSong: currentSong,
 		Playing:     curr.Playing,
+		Queue:       s.getQueue(),
 	}
 }
 
-func (s *Spotify) completeAuth(srv *http.Server) func(w http.ResponseWriter, r *http.Request) {
+func (s *Spotify) completeAuth(srv *http.Server) (func(w http.ResponseWriter, r *http.Request), chan (bool)) {
 	auth := spotifyauth.New(
 		spotifyauth.WithClientID(os.Getenv("SPOTIFY_ID")),
 		spotifyauth.WithClientSecret(os.Getenv("SPOTIFY_SECRET")),
 		spotifyauth.WithRedirectURL(redirectURI),
 		spotifyauth.WithScopes(spotifyauth.ScopeUserReadCurrentlyPlaying, spotifyauth.ScopeUserReadPlaybackState, spotifyauth.ScopeUserModifyPlaybackState),
 	)
+	channel := make(chan bool)
 
 	// In the background, fetch the auth URL and open it in the browser
 	go func() {
@@ -138,6 +165,7 @@ func (s *Spotify) completeAuth(srv *http.Server) func(w http.ResponseWriter, r *
 		}
 		// use the token to get an authenticated client
 		s.client = spotify.New(auth.Client(r.Context(), tok))
+		channel <- true
 
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, "<script>window.close('','_parent','')</script>")
@@ -145,5 +173,5 @@ func (s *Spotify) completeAuth(srv *http.Server) func(w http.ResponseWriter, r *
 		time.AfterFunc(time.Second*5, func() {
 			srv.Shutdown(context.Background())
 		})
-	}
+	}, channel
 }

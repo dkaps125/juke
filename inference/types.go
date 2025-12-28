@@ -6,6 +6,11 @@ type SongOutput struct {
 	Reason string
 }
 
+type ProviderOptions struct {
+	ModelName    string
+	SystemPrompt string
+}
+
 var (
 	outputType []SongOutput
 )

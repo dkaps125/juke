@@ -8,12 +8,13 @@ type Song struct {
 
 type PlayerState struct {
 	CurrentSong *Song
+	Queue       []Song
 	Playing     bool
 }
 
 // Source is a source for streaming music and music data
 type Source interface {
-	Authenticate()
+	Authenticate() chan (bool)
 	SearchAndPlaySongs(songs []Song)
 	Previous()
 	Pause()

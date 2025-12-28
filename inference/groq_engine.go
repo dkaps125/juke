@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"slices"
 
 	"github.com/conneroisu/groq-go"
 	"github.com/conneroisu/groq-go/pkg/schema"
@@ -13,18 +12,8 @@ import (
 )
 
 var (
-	groqDefaultMessages = []groq.ChatCompletionMessage{
-		{
-			Role:    groq.RoleSystem,
-			Content: SYSTEM_PROMPT,
-		},
-	}
 	groqFormat, _ = schema.ReflectSchema(outputType)
 )
-
-type GroqOptions struct {
-	ModelName string
-}
 
 type GroqEngine struct {
 	client    *groq.Client
@@ -32,7 +21,7 @@ type GroqEngine struct {
 	modelName string
 }
 
-func NewGroqEngine(opts GroqOptions) *GroqEngine {
+func NewGroqEngine(opts ProviderOptions) *GroqEngine {
 	client, _ := groq.NewClient(
 		os.Getenv("GROQ_API_KEY"),
 	)
@@ -40,7 +29,12 @@ func NewGroqEngine(opts GroqOptions) *GroqEngine {
 	return &GroqEngine{
 		client:    client,
 		modelName: opts.ModelName,
-		messages:  slices.Clone(groqDefaultMessages),
+		messages: []groq.ChatCompletionMessage{
+			{
+				Role:    groq.RoleSystem,
+				Content: opts.SystemPrompt,
+			},
+		},
 	}
 }
 

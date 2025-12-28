@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"slices"
 
 	"github.com/dkaps125/juke/music"
 	"github.com/revrost/go-openrouter"
@@ -13,15 +12,8 @@ import (
 )
 
 var (
-	openrouterDefaultMessages = []openrouter.ChatCompletionMessage{
-		openrouter.SystemMessage(SYSTEM_PROMPT),
-	}
 	openrouterFormat, _ = jsonschema.GenerateSchemaForType(outputType)
 )
-
-type OpenrouterOptions struct {
-	ModelName string
-}
 
 type OpenrouterEngine struct {
 	client    *openrouter.Client
@@ -29,7 +21,7 @@ type OpenrouterEngine struct {
 	modelName string
 }
 
-func NewOpenrouterEngine(opts OpenrouterOptions) *OpenrouterEngine {
+func NewOpenrouterEngine(opts ProviderOptions) *OpenrouterEngine {
 	client := openrouter.NewClient(
 		os.Getenv("OPENROUTER_API_KEY"),
 	)
@@ -37,7 +29,9 @@ func NewOpenrouterEngine(opts OpenrouterOptions) *OpenrouterEngine {
 	return &OpenrouterEngine{
 		client:    client,
 		modelName: opts.ModelName,
-		messages:  slices.Clone(openrouterDefaultMessages),
+		messages: []openrouter.ChatCompletionMessage{
+			openrouter.SystemMessage(opts.SystemPrompt),
+		},
 	}
 }
 

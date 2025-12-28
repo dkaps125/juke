@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"runtime"
 	"time"
 
@@ -146,23 +145,27 @@ func GetMusicSource(conf config.Config) music.Source {
 	}
 }
 
-func GetLLMEngine(conf config.Config) inference.Engine {
+func GetLLMEngine(conf config.Config, systemPromopt string) inference.Engine {
 	switch conf.LLMProvider {
 	case config.OLLAMA:
-		return inference.NewOllamaEngine(inference.OllamaOptions{
-			ModelName: conf.ModelName,
+		return inference.NewOllamaEngine(inference.ProviderOptions{
+			ModelName:    conf.ModelName,
+			SystemPrompt: systemPromopt,
 		})
 	case config.OPENROUTER:
-		return inference.NewOpenrouterEngine(inference.OpenrouterOptions{
-			ModelName: conf.ModelName,
+		return inference.NewOpenrouterEngine(inference.ProviderOptions{
+			ModelName:    conf.ModelName,
+			SystemPrompt: systemPromopt,
 		})
 	case config.GROQ:
-		return inference.NewGroqEngine(inference.GroqOptions{
-			ModelName: conf.ModelName,
+		return inference.NewGroqEngine(inference.ProviderOptions{
+			ModelName:    conf.ModelName,
+			SystemPrompt: systemPromopt,
 		})
 	default:
-		return inference.NewOllamaEngine(inference.OllamaOptions{
-			ModelName: conf.ModelName,
+		return inference.NewOllamaEngine(inference.ProviderOptions{
+			ModelName:    conf.ModelName,
+			SystemPrompt: systemPromopt,
 		})
 	}
 }
@@ -170,13 +173,13 @@ func GetLLMEngine(conf config.Config) inference.Engine {
 func main() {
 	config := config.GetConfig()
 
-	fmt.Println(config)
-
-	// TODO: genericize
 	musicSource := GetMusicSource(config)
-	musicSource.Authenticate()
+	authChan := musicSource.Authenticate()
 
-	llm := GetLLMEngine(config)
+	<-authChan
+
+	systemPrompt := inference.GetSystemPrompt(musicSource.CurrentState())
+	llm := GetLLMEngine(config, systemPrompt)
 
 	app := App{
 		music: musicSource,

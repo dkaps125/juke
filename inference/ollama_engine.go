@@ -5,16 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"slices"
 
 	"github.com/dkaps125/juke/music"
 	"github.com/ollama/ollama/api"
 )
-
-// OllamaOptions contains options that will be used to run inference through Ollama
-type OllamaOptions struct {
-	ModelName string
-}
 
 // OllamaEngine is the main struct class for inference via Ollama-hosted models
 type OllamaEngine struct {
@@ -24,12 +18,6 @@ type OllamaEngine struct {
 }
 
 var (
-	ollamaDefaultMessages = []api.Message{
-		{
-			Role:    "system",
-			Content: SYSTEM_PROMPT,
-		},
-	}
 	stream          = false
 	ollamaFormat, _ = json.Marshal(map[string]any{
 		"type": "array",
@@ -52,15 +40,20 @@ var (
 )
 
 // NewOllamaEngine creates a new inference engine backed by Ollama
-func NewOllamaEngine(opts OllamaOptions) *OllamaEngine {
+func NewOllamaEngine(opts ProviderOptions) *OllamaEngine {
 	client, err := api.ClientFromEnvironment()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	return &OllamaEngine{
-		client:    client,
-		messages:  slices.Clone(ollamaDefaultMessages),
+		client: client,
+		messages: []api.Message{
+			{
+				Role:    "system",
+				Content: opts.SystemPrompt,
+			},
+		},
 		modelName: opts.ModelName,
 	}
 }
