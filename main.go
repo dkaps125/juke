@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"runtime"
 	"time"
 
@@ -117,7 +118,7 @@ func (a App) startUpdates() {
 
 			menuet.Defaults().SetString("nowPlayingSong", curr.CurrentSong.Title)
 			menuet.Defaults().SetString("nowPlayingArtist", curr.CurrentSong.Artist)
-			time.Sleep(time.Second)
+			time.Sleep(time.Second * 30)
 		}
 	}()
 }
@@ -132,7 +133,7 @@ func (a App) Run() {
 		time.Sleep(3 * time.Second)
 	}()
 
-	a.startUpdates()
+	// a.startUpdates()
 	menuet.App().RunApplication()
 }
 
@@ -171,6 +172,8 @@ func GetLLMEngine(conf config.Config, systemPromopt string) inference.Engine {
 }
 
 func main() {
+	newSession := flag.Bool("new", false, "Set to ignore currently playing and queued songs")
+
 	config := config.GetConfig()
 
 	musicSource := GetMusicSource(config)
@@ -178,7 +181,13 @@ func main() {
 
 	<-authChan
 
-	systemPrompt := inference.GetSystemPrompt(musicSource.CurrentState())
+	var state music.PlayerState
+	if *newSession {
+		state = music.PlayerState{}
+	} else {
+		state = musicSource.CurrentState()
+	}
+	systemPrompt := inference.GetSystemPrompt(state)
 	llm := GetLLMEngine(config, systemPrompt)
 
 	app := App{

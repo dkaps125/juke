@@ -34,7 +34,7 @@ Suggest songs in this order:
 	basePrompt += `
 # Queued songs
 `
-	if len(state.Queue) > 0 {
+	if state.Queue != nil && len(state.Queue) > 0 {
 		for _, song := range state.Queue {
 			basePrompt += fmt.Sprintf(`- %s by %s
 `, song.Title, song.Artist)
