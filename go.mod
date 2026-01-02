@@ -11,7 +11,6 @@ require (
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/caseymrm/askm v1.0.0 // indirect
-	github.com/caseymrm/menuet v1.0.3 // indirect
 	github.com/chewxy/hm v1.0.0 // indirect
 	github.com/chewxy/math32 v1.11.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
