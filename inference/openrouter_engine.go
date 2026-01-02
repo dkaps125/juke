@@ -35,8 +35,8 @@ func NewOpenrouterEngine(opts ProviderOptions) *OpenrouterEngine {
 	}
 }
 
-func (e *OpenrouterEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
-	prompt := getPrompt(userPrompt, currentSong)
+func (e *OpenrouterEngine) PromptLLM(userPrompt string, callback func(song []music.Song)) {
+	prompt := getPrompt(userPrompt)
 
 	e.messages = append(e.messages, openrouter.UserMessage(prompt))
 	resp, err := e.client.CreateChatCompletion(

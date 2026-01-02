@@ -38,8 +38,8 @@ func NewGroqEngine(opts ProviderOptions) *GroqEngine {
 	}
 }
 
-func (e *GroqEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
-	prompt := getPrompt(userPrompt, currentSong)
+func (e *GroqEngine) PromptLLM(userPrompt string, callback func(song []music.Song)) {
+	prompt := getPrompt(userPrompt)
 
 	e.messages = append(e.messages, groq.ChatCompletionMessage{
 		Content: prompt,

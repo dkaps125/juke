@@ -47,6 +47,6 @@ Suggest songs in this order:
 	return strings.TrimSpace(basePrompt)
 }
 
-func getPrompt(userPrompt string, currentSong *music.Song) string {
+func getPrompt(userPrompt string) string {
 	return userPrompt
 }

@@ -59,8 +59,8 @@ func NewOllamaEngine(opts ProviderOptions) *OllamaEngine {
 }
 
 // PromptLLM does what it says
-func (e *OllamaEngine) PromptLLM(userPrompt string, currentSong *music.Song, callback func(song []music.Song)) {
-	prompt := getPrompt(userPrompt, currentSong)
+func (e *OllamaEngine) PromptLLM(userPrompt string, callback func(song []music.Song)) {
+	prompt := getPrompt(userPrompt)
 
 	e.messages = append(e.messages, api.Message{
 		Role:    "user",

@@ -7,7 +7,6 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/caseymrm/menuet"
 	"github.com/dkaps125/juke/config"
 	"github.com/dkaps125/juke/inference"
 	"github.com/dkaps125/juke/music"
@@ -89,10 +88,7 @@ func main() {
 		fmt.Print("> ")
 		prompt, _ := reader.ReadString('\n')
 
-		app.llm.PromptLLM(prompt, &music.Song{
-			Title:  menuet.Defaults().String("nowPlayingSong"),
-			Artist: menuet.Defaults().String("nowPlayingArtist"),
-		}, func(songs []music.Song) {
+		app.llm.PromptLLM(prompt, func(songs []music.Song) {
 			for _, song := range songs {
 				fmt.Printf("%s -- %s\n", song.Title, song.Artist)
 			}
