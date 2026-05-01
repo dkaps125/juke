@@ -119,7 +119,8 @@ func (a App) callTool(toolCall inference.ToolCall) inference.ToolResult {
 	argPtr := reflect.New(toolMethod.Type().In(0))
 	mapToStruct(argPtr.Interface(), toolCall.Arguments)
 
-	result := toolMethod.Call([]reflect.Value{reflect.ValueOf(argPtr.Elem().Interface())})[0].Interface()
+	arg := reflect.ValueOf(argPtr.Elem().Interface())
+	result := toolMethod.Call([]reflect.Value{arg})[0].Interface()
 	resultBytes, _ := json.Marshal(result)
 
 	return inference.ToolResult{
@@ -129,9 +130,7 @@ func (a App) callTool(toolCall inference.ToolCall) inference.ToolResult {
 	}
 }
 
-func mapToStruct(t interface{}, m map[string]any) interface{} {
+func mapToStruct(t interface{}, m map[string]any) {
 	jsonBytes, _ := json.Marshal(m)
 	json.Unmarshal(jsonBytes, t)
-
-	return t
 }
