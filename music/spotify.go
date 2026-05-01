@@ -33,34 +33,48 @@ func (s *Spotify) Authenticate() chan (bool) {
 	srv := &http.Server{Addr: fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))}
 
 	handler, channel := s.completeAuth(srv)
-	http.HandleFunc("/callback", handler)
+	http.HandleFunc("/spotify/callback", handler)
 
 	go srv.ListenAndServe()
 
 	return channel
 }
 
-func (s *Spotify) searchSong(song Song) (*spotify.ID, bool) {
+func (s *Spotify) Search(song Song) []Result {
 	results, err := s.client.Search(context.Background(), fmt.Sprintf("track:%s artist:%s", song.Title, song.Artist), spotify.SearchTypeTrack)
 	if err != nil {
 		log.Println(err.Error())
-		return nil, false
+		return nil
 	}
 
 	if results.Tracks == nil || results.Tracks.Tracks == nil || len(results.Tracks.Tracks) == 0 {
-		return nil, false
+		return nil
 	}
 
-	return &results.Tracks.Tracks[0].ID, true
-}
-
-func (s *Spotify) SearchAndPlaySongs(songs []Song) {
-	for _, song := range songs {
-		if id, ok := s.searchSong(song); ok {
-			s.client.QueueSong(context.Background(), *id)
+	return utils.Map(results.Tracks.Tracks, func(track spotify.FullTrack) Result {
+		return Result{
+			Title:   track.Name,
+			Artists: artistsToString(track.Artists),
+			URI:     string(track.URI),
 		}
-	}
+	})
 }
+
+func (s *Spotify) PlaySong(songUri SongURI) {
+	uri := spotify.URI(songUri.URI)
+
+	s.client.PlayOpt(context.Background(), &spotify.PlayOptions{
+		URIs: []spotify.URI{uri},
+	})
+}
+
+// func (s *Spotify) SearchAndPlaySongs(songs []Song) {
+// 	for _, song := range songs {
+// 		if id, ok := s.searchSong(song); ok {
+// 			s.client.QueueSong(context.Background(), *id)
+// 		}
+// 	}
+// }
 
 func (s *Spotify) getQueue() []Song {
 	queue, _ := s.client.GetQueue(context.Background())
