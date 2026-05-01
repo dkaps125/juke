@@ -73,7 +73,8 @@ func (s *Spotify) PlaySong(songUri SongURI) GenericResult {
 }
 
 func (s *Spotify) QueueSong(songID SongID) GenericResult {
-	id := spotify.ID(songID.ID)
+	// Trim prefix in case the LLM passes the full URI
+	id := spotify.ID(strings.Replace(songID.ID, "spotify:track:", "", 1))
 
 	s.client.QueueSong(context.Background(), id)
 
