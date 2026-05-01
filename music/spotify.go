@@ -60,12 +60,26 @@ func (s *Spotify) Search(song Song) []Result {
 	})
 }
 
-func (s *Spotify) PlaySong(songUri SongURI) {
+func (s *Spotify) PlaySong(songUri SongURI) GenericResult {
 	uri := spotify.URI(songUri.URI)
 
 	s.client.PlayOpt(context.Background(), &spotify.PlayOptions{
 		URIs: []spotify.URI{uri},
 	})
+
+	return GenericResult{
+		Status: "Success",
+	}
+}
+
+func (s *Spotify) QueueSong(songID SongID) GenericResult {
+	id := spotify.ID(songID.ID)
+
+	s.client.QueueSong(context.Background(), id)
+
+	return GenericResult{
+		Status: "Success",
+	}
 }
 
 // func (s *Spotify) SearchAndPlaySongs(songs []Song) {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/dkaps125/juke/config"
 	"github.com/dkaps125/juke/inference"
@@ -71,7 +72,7 @@ func (a App) Start() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Print("> ")
+		fmt.Print("\n> ")
 		prompt, _ := reader.ReadString('\n')
 		toolCalls := make([]inference.ToolCall, 0)
 
@@ -114,24 +115,23 @@ func (a App) Start() {
 }
 
 func (a App) callTool(toolCall inference.ToolCall) inference.ToolResult {
-	switch toolCall.Name {
-	case "Search":
-		result := a.musicSource.Search(music.Song{
-			Artist: toolCall.Arguments["Artist"].(string),
-			Title:  toolCall.Arguments["Title"].(string),
-		})
-		resultBytes, _ := json.Marshal(result)
+	toolMethod := reflect.ValueOf(a.musicSource).MethodByName(toolCall.Name)
+	argPtr := reflect.New(toolMethod.Type().In(0))
+	mapToStruct(argPtr.Interface(), toolCall.Arguments)
 
-		return inference.ToolResult{
-			Name:    toolCall.Name,
-			Content: string(resultBytes),
-			ID:      toolCall.ID,
-		}
-	default:
-		return inference.ToolResult{
-			Name:    toolCall.Name,
-			Content: "Tool not found",
-			ID:      toolCall.ID,
-		}
+	result := toolMethod.Call([]reflect.Value{reflect.ValueOf(argPtr.Elem().Interface())})[0].Interface()
+	resultBytes, _ := json.Marshal(result)
+
+	return inference.ToolResult{
+		Name:    toolCall.Name,
+		Content: string(resultBytes),
+		ID:      toolCall.ID,
 	}
+}
+
+func mapToStruct(t interface{}, m map[string]any) interface{} {
+	jsonBytes, _ := json.Marshal(m)
+	json.Unmarshal(jsonBytes, t)
+
+	return t
 }

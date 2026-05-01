@@ -10,10 +10,18 @@ type SongURI struct {
 	URI string
 }
 
+type SongID struct {
+	ID string
+}
+
 type PlayerState struct {
 	CurrentSong *Song
 	Queue       []Song
 	Playing     bool
+}
+
+type GenericResult struct {
+	Status string
 }
 
 type Result struct {
@@ -27,7 +35,9 @@ type ToolSource interface {
 	// Searches for a song
 	Search(Song) []Result
 	// Plays a song
-	PlaySong(SongURI)
+	PlaySong(SongURI) GenericResult
+	// Queues a song
+	QueueSong(SongID) GenericResult
 }
 
 // Source is a source for streaming music and music data
