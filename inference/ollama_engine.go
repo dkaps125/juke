@@ -96,7 +96,7 @@ func (e *OllamaEngine) runInference() iter.Seq[Message] {
 		Model:    e.modelName,
 		Messages: e.messages,
 		Stream:   &stream,
-		Options:  map[string]any{"temperature": 0.2, "top_p": 0.9},
+		Options:  map[string]any{"temperature": 0.2, "top_p": 0.9, "num_predict": 1000},
 		Tools:    e.tools,
 
 		// Use structured outputs to support models without tool calling

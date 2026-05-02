@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dkaps125/juke/utils"
+	"github.com/google/uuid"
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
@@ -22,7 +23,7 @@ type Spotify struct {
 
 var (
 	ch    = make(chan *spotify.Client)
-	state = "abc123" // TODO: make random
+	state = uuid.New().String()
 )
 
 func NewSpotify() *Spotify {
@@ -82,14 +83,6 @@ func (s *Spotify) QueueSong(songID SongID) GenericResult {
 		Status: "Success",
 	}
 }
-
-// func (s *Spotify) SearchAndPlaySongs(songs []Song) {
-// 	for _, song := range songs {
-// 		if id, ok := s.searchSong(song); ok {
-// 			s.client.QueueSong(context.Background(), *id)
-// 		}
-// 	}
-// }
 
 func (s *Spotify) getQueue() []Song {
 	queue, _ := s.client.GetQueue(context.Background())
@@ -193,7 +186,7 @@ func (s *Spotify) completeAuth(srv *http.Server) (func(w http.ResponseWriter, r 
 			log.Fatalf("State mismatch: %s != %s\n", st, state)
 		}
 		// use the token to get an authenticated client
-		s.client = spotify.New(auth.Client(r.Context(), tok))
+		s.client = spotify.New(auth.Client(context.Background(), tok))
 		channel <- true
 
 		w.Header().Set("Content-Type", "text/html")
