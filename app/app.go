@@ -1,12 +1,11 @@
 package app
 
 import (
-	"bufio"
 	"encoding/json"
-	"fmt"
-	"os"
+	"log"
 	"reflect"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkaps125/juke/config"
 	"github.com/dkaps125/juke/inference"
 	"github.com/dkaps125/juke/music"
@@ -49,72 +48,78 @@ func GetLLMEngine(conf config.Config, systemPromopt string) inference.Engine {
 type App struct {
 	musicSource music.Source
 	llm         inference.Engine
+	program     *tea.Program
 }
 
-func NewApp(config config.Config) App {
+func NewApp(config config.Config) *App {
 	musicSource := GetMusicSource(config)
 
 	state := musicSource.CurrentState()
 	systemPrompt := inference.GetSystemPrompt(state)
 	llm := GetLLMEngine(config, systemPrompt)
 
-	return App{
+	app := App{
 		musicSource: musicSource,
 		llm:         llm,
 	}
+
+	// Sketchy
+	app.program = tea.NewProgram(initialModel(app.prompt))
+	return &app
 }
 
-func (a App) Start() {
+func (a *App) Start() {
 	authChan := a.musicSource.Authenticate()
-
 	<-authChan
 
-	reader := bufio.NewReader(os.Stdin)
+	if _, err := a.program.Run(); err != nil {
+		log.Fatal(err)
+	}
+}
 
-	for {
-		fmt.Print("\n> ")
-		prompt, _ := reader.ReadString('\n')
-		toolCalls := make([]inference.ToolCall, 0)
+func (a *App) prompt(prompt string) {
+	toolCalls := make([]inference.ToolCall, 0)
 
-		for message := range a.llm.PromptLLM(prompt) {
+	for message := range a.llm.PromptLLM(prompt) {
+		if len(message.Thinking) > 0 {
+			a.program.Send(thinkingMessage(message.Thinking))
+		}
+		if len(message.Content) > 0 {
+			a.program.Send(talkingMessage(message.Content))
+		}
+
+		if len(message.ToolCalls) > 0 {
+			toolCalls = append(toolCalls, message.ToolCalls...)
+		}
+	}
+
+	for len(toolCalls) > 0 {
+		toolCallResults := make([]inference.ToolResult, len(toolCalls))
+		for i, tool := range toolCalls {
+			toolCallResults[i] = a.callTool(tool)
+		}
+
+		// Reset tool calls
+		toolCalls = make([]inference.ToolCall, 0)
+
+		for message := range a.llm.ProcessTools(toolCallResults) {
 			if len(message.Thinking) > 0 {
-				fmt.Print(message.Thinking)
+				a.program.Send(thinkingMessage(message.Thinking))
 			}
 			if len(message.Content) > 0 {
-				fmt.Print(message.Content)
+				a.program.Send(talkingMessage(message.Content))
 			}
 
 			if len(message.ToolCalls) > 0 {
 				toolCalls = append(toolCalls, message.ToolCalls...)
 			}
 		}
-
-		for len(toolCalls) > 0 {
-			toolCallResults := make([]inference.ToolResult, len(toolCalls))
-			for i, tool := range toolCalls {
-				toolCallResults[i] = a.callTool(tool)
-			}
-
-			// Reset tool calls
-			toolCalls = make([]inference.ToolCall, 0)
-
-			for message := range a.llm.ProcessTools(toolCallResults) {
-				if len(message.Thinking) > 0 {
-					fmt.Print(message.Thinking)
-				}
-				if len(message.Content) > 0 {
-					fmt.Print(message.Content)
-				}
-
-				if len(message.ToolCalls) > 0 {
-					toolCalls = append(toolCalls, message.ToolCalls...)
-				}
-			}
-		}
 	}
+
+	a.program.Send(completedMessage(""))
 }
 
-func (a App) callTool(toolCall inference.ToolCall) inference.ToolResult {
+func (a *App) callTool(toolCall inference.ToolCall) inference.ToolResult {
 	toolMethod := reflect.ValueOf(a.musicSource).MethodByName(toolCall.Name)
 	argPtr := reflect.New(toolMethod.Type().In(0))
 	mapToStruct(argPtr.Interface(), toolCall.Arguments)
