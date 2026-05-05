@@ -27,6 +27,7 @@ type GenericResult struct {
 type Result struct {
 	Title   string
 	Artists string
+	Album   string
 	URI     string
 }
 

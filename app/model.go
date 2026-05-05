@@ -25,9 +25,10 @@ type model struct {
 	toolCalling   bool
 
 	onPrompt func(string)
+	stopChan chan (bool)
 }
 
-func initialModel(onPrompt func(string)) model {
+func initialModel(onPrompt func(string), stopChan chan (bool)) model {
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
 	ta.SetVirtualCursor(false)
@@ -56,9 +57,10 @@ func initialModel(onPrompt func(string)) model {
 		messages:      []string{},
 		viewport:      vp,
 		senderStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
-		thinkingStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("1")),
+		thinkingStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("#3C3C3C")),
 		err:           nil,
 		onPrompt:      onPrompt,
+		stopChan:      stopChan,
 	}
 }
 
@@ -80,9 +82,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.GotoBottom()
 	case tea.KeyPressMsg:
 		switch msg.String() {
-		case "ctrl+c", "esc":
+		case "ctrl+c":
 			fmt.Println(m.textarea.Value())
 			return m, tea.Quit
+		case "esc":
+			if m.thinking || m.talking || m.toolCalling {
+				m.stopChan <- true
+			}
+			m.viewport.GotoBottom()
+			return m, nil
 		case "enter":
 			m.messages = append(m.messages, m.senderStyle.Render("You: ")+m.textarea.Value())
 			m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width()).Render(strings.Join(m.messages, "\n\n")))
@@ -101,9 +109,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.thinking {
 			m.talking = false
 			m.thinking = true
-			m.messages = append(m.messages, string(msg))
+			m.messages = append(m.messages, m.thinkingStyle.Render(string(msg)))
 		} else {
-			m.messages[len(m.messages)-1] = m.messages[len(m.messages)-1] + string(msg)
+			m.messages[len(m.messages)-1] = m.messages[len(m.messages)-1] + m.thinkingStyle.Render(string(msg))
 		}
 		m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width()).Render(strings.Join(m.messages, "\n\n")))
 		m.viewport.GotoBottom()
@@ -113,7 +121,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.talking {
 			m.talking = true
 			m.thinking = false
-			m.messages = append(m.messages, string(msg))
+			m.messages = append(m.messages, "\n"+string(msg))
 		} else {
 			m.messages[len(m.messages)-1] = m.messages[len(m.messages)-1] + string(msg)
 		}

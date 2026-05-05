@@ -57,6 +57,7 @@ func (s *Spotify) Search(song Song) []Result {
 			Title:   track.Name,
 			Artists: artistsToString(track.Artists),
 			URI:     string(track.URI),
+			Album:   track.Album.Name,
 		}
 	})
 }

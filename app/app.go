@@ -46,9 +46,10 @@ func GetLLMEngine(conf config.Config, systemPromopt string) inference.Engine {
 }
 
 type App struct {
-	musicSource music.Source
-	llm         inference.Engine
-	program     *tea.Program
+	musicSource   music.Source
+	llm           inference.Engine
+	program       *tea.Program
+	inferenceChan chan (bool)
 }
 
 func NewApp(config config.Config) *App {
@@ -59,12 +60,13 @@ func NewApp(config config.Config) *App {
 	llm := GetLLMEngine(config, systemPrompt)
 
 	app := App{
-		musicSource: musicSource,
-		llm:         llm,
+		musicSource:   musicSource,
+		llm:           llm,
+		inferenceChan: make(chan (bool)),
 	}
 
 	// Sketchy
-	app.program = tea.NewProgram(initialModel(app.prompt))
+	app.program = tea.NewProgram(initialModel(app.prompt, app.inferenceChan))
 	return &app
 }
 
@@ -81,18 +83,25 @@ func (a *App) prompt(prompt string) {
 	toolCalls := make([]inference.ToolCall, 0)
 
 	for message := range a.llm.PromptLLM(prompt) {
-		if len(message.Thinking) > 0 {
-			a.program.Send(thinkingMessage(message.Thinking))
-		}
-		if len(message.Content) > 0 {
-			a.program.Send(talkingMessage(message.Content))
-		}
+		select {
+		case <-a.inferenceChan:
+			a.program.Send(completedMessage(""))
+			return
+		default:
+			if len(message.Thinking) > 0 {
+				a.program.Send(thinkingMessage(message.Thinking))
+			}
+			if len(message.Content) > 0 {
+				a.program.Send(talkingMessage(message.Content))
+			}
 
-		if len(message.ToolCalls) > 0 {
-			toolCalls = append(toolCalls, message.ToolCalls...)
+			if len(message.ToolCalls) > 0 {
+				toolCalls = append(toolCalls, message.ToolCalls...)
+			}
 		}
 	}
 
+	// TODO: handle tool call interruption
 	for len(toolCalls) > 0 {
 		toolCallResults := make([]inference.ToolResult, len(toolCalls))
 		for i, tool := range toolCalls {
@@ -103,15 +112,21 @@ func (a *App) prompt(prompt string) {
 		toolCalls = make([]inference.ToolCall, 0)
 
 		for message := range a.llm.ProcessTools(toolCallResults) {
-			if len(message.Thinking) > 0 {
-				a.program.Send(thinkingMessage(message.Thinking))
-			}
-			if len(message.Content) > 0 {
-				a.program.Send(talkingMessage(message.Content))
-			}
+			select {
+			case <-a.inferenceChan:
+				a.program.Send(completedMessage(""))
+				return
+			default:
+				if len(message.Thinking) > 0 {
+					a.program.Send(thinkingMessage(message.Thinking))
+				}
+				if len(message.Content) > 0 {
+					a.program.Send(talkingMessage(message.Content))
+				}
 
-			if len(message.ToolCalls) > 0 {
-				toolCalls = append(toolCalls, message.ToolCalls...)
+				if len(message.ToolCalls) > 0 {
+					toolCalls = append(toolCalls, message.ToolCalls...)
+				}
 			}
 		}
 	}
