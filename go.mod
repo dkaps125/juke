@@ -6,6 +6,7 @@ require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.6
 	charm.land/lipgloss/v2 v2.0.3
+	github.com/ZaguanLabs/fireworks-sdk-go v1.2.30
 	github.com/conneroisu/groq-go v0.9.5
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1

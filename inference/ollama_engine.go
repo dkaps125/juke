@@ -61,7 +61,7 @@ func NewOllamaEngine(opts ProviderOptions) *OllamaEngine {
 			},
 		},
 		modelName: opts.ModelName,
-		tools:     ToFunctions[music.ToolSource]("./music/source.go"),
+		tools:     toOllamaTools[music.ToolSource]("./music/source.go"),
 	}
 }
 
@@ -173,7 +173,7 @@ func getFunctionDocstrings(name, file string) map[string]string {
 	return docStrings
 }
 
-func ToFunctions[T any](file string) api.Tools {
+func toOllamaTools[T any](file string) api.Tools {
 	v := reflect.TypeFor[T]()
 	numTools := v.NumMethod()
 	tools := make(api.Tools, numTools)

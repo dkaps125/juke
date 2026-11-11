@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"log"
+	"os"
 	"reflect"
 
 	tea "charm.land/bubbletea/v2"
@@ -32,11 +33,19 @@ func GetLLMEngine(conf config.Config, systemPromopt string) inference.Engine {
 	// 		ModelName:    conf.ModelName,
 	// 		SystemPrompt: systemPromopt,
 	// 	})
-	// case config.GROQ:
-	// 	return inference.NewGroqEngine(inference.ProviderOptions{
-	// 		ModelName:    conf.ModelName,
-	// 		SystemPrompt: systemPromopt,
-	// 	})
+	case config.FIREWORKS:
+		return inference.NewFireworksEngine(
+			os.Getenv("FIREWORKS_API_KEY"), // TODO: document or config
+			inference.ProviderOptions{
+				ModelName:    conf.ModelName,
+				SystemPrompt: systemPromopt,
+			},
+		)
+	case config.GROQ:
+		return inference.NewGroqEngine(inference.ProviderOptions{
+			ModelName:    conf.ModelName,
+			SystemPrompt: systemPromopt,
+		})
 	default:
 		return inference.NewOllamaEngine(inference.ProviderOptions{
 			ModelName:    conf.ModelName,
@@ -85,6 +94,7 @@ func (a *App) prompt(prompt string) {
 	for message := range a.llm.PromptLLM(prompt) {
 		select {
 		case <-a.inferenceChan:
+			print("")
 			a.program.Send(completedMessage(""))
 			return
 		default:

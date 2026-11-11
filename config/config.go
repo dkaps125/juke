@@ -16,6 +16,7 @@ const (
 	OLLAMA     LLMProvider = iota
 	OPENROUTER LLMProvider = iota
 	GROQ       LLMProvider = iota
+	FIREWORKS  LLMProvider = iota
 )
 
 const (
@@ -27,6 +28,7 @@ var (
 		"ollama":     OLLAMA,
 		"openrouter": OPENROUTER,
 		"groq":       GROQ,
+		"fireworks":  FIREWORKS,
 	}
 	sources = map[string]MusicSource{
 		"spotify": SPOTIFY,
