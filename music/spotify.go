@@ -160,6 +160,10 @@ func (s Spotify) CurrentState() PlayerState {
 	}
 }
 
+func (s *Spotify) GetCurrentSong() PlayerState {
+	return s.CurrentState()
+}
+
 func (s *Spotify) completeAuth(srv *http.Server) (func(w http.ResponseWriter, r *http.Request), chan (bool)) {
 	auth := spotifyauth.New(
 		spotifyauth.WithClientID(os.Getenv("SPOTIFY_ID")),

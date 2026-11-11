@@ -39,6 +39,9 @@ type ToolSource interface {
 	PlaySong(SongURI) GenericResult
 	// Queues a song
 	QueueSong(SongID) GenericResult
+	// Gets the song currently playing, the queue, and whether the player is playing or not
+	// Note that when nothing is queued, the currently playing song may show in the queue repeatedly.
+	GetCurrentSong() PlayerState
 }
 
 // Source is a source for streaming music and music data

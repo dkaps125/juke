@@ -146,11 +146,18 @@ func (a *App) prompt(prompt string) {
 
 func (a *App) callTool(toolCall inference.ToolCall) inference.ToolResult {
 	toolMethod := reflect.ValueOf(a.musicSource).MethodByName(toolCall.Name)
-	argPtr := reflect.New(toolMethod.Type().In(0))
-	mapToStruct(argPtr.Interface(), toolCall.Arguments)
+	var result any
 
-	arg := reflect.ValueOf(argPtr.Elem().Interface())
-	result := toolMethod.Call([]reflect.Value{arg})[0].Interface()
+	if toolMethod.Type().NumIn() > 0 {
+		argPtr := reflect.New(toolMethod.Type().In(0))
+		mapToStruct(argPtr.Interface(), toolCall.Arguments)
+
+		arg := reflect.ValueOf(argPtr.Elem().Interface())
+		result = toolMethod.Call([]reflect.Value{arg})[0].Interface()
+	} else {
+		result = toolMethod.Call([]reflect.Value{})[0].Interface()
+	}
+
 	resultBytes, _ := json.Marshal(result)
 
 	return inference.ToolResult{

@@ -193,15 +193,17 @@ func toFireworksTools[T any](file string) []types.SharedParamsChatCompletionTool
 
 	for i := range numTools {
 		method := v.Method(i)
-
-		argStruct := method.Type.In(0) // Relying on struct args
-		numArgs := argStruct.NumField()
 		args := make(map[string]any)
 
-		for j := range numArgs {
-			field := argStruct.Field(j)
-			args[field.Name] = map[string]any{
-				"type": field.Type.Name(),
+		if method.Type.NumIn() > 0 {
+			argStruct := method.Type.In(0) // Relying on struct args
+			numArgs := argStruct.NumField()
+
+			for j := range numArgs {
+				field := argStruct.Field(j)
+				args[field.Name] = map[string]any{
+					"type": field.Type.Name(),
+				}
 			}
 		}
 
