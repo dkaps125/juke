@@ -8,14 +8,9 @@ import (
 	"reflect"
 
 	"github.com/conneroisu/groq-go"
-	"github.com/conneroisu/groq-go/pkg/schema"
 	"github.com/conneroisu/groq-go/pkg/tools"
 	"github.com/dkaps125/juke/music"
 	"github.com/dkaps125/juke/utils"
-)
-
-var (
-	groqFormat, _ = schema.ReflectSchema(outputType)
 )
 
 type GroqEngine struct {

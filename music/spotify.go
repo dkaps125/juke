@@ -127,15 +127,7 @@ func artistsToString(artists []spotify.SimpleArtist) string {
 	return strings.Join(artistNames, ", ")
 }
 
-// TODO: look at combining into a single GetQueue call
 func (s Spotify) CurrentState() PlayerState {
-	if s.client == nil {
-		return PlayerState{
-			CurrentSong: nil,
-			Playing:     false,
-		}
-	}
-
 	curr, _ := s.client.PlayerCurrentlyPlaying(context.Background())
 
 	if curr == nil || curr.Item == nil {
@@ -164,12 +156,41 @@ func (s *Spotify) GetCurrentSong() PlayerState {
 	return s.CurrentState()
 }
 
+func (s *Spotify) GetPlaylists() []Playlist {
+	resp, err := s.client.CurrentUsersPlaylists(context.Background(), spotify.Limit(50))
+	if err != nil {
+		panic(err)
+	}
+
+	return utils.Map(resp.Playlists, func(p spotify.SimplePlaylist) Playlist {
+		return Playlist{
+			Name:        p.Name,
+			URI:         string(p.URI),
+			Description: p.Description,
+			ID:          p.ID.String(),
+		}
+	})
+}
+
+func (s *Spotify) GetPlaylistTracks(playlistId PlaylistID) []Result {
+	resp, _ := s.client.GetPlaylistItems(context.Background(), spotify.ID(playlistId.ID))
+
+	return utils.Map(resp.Items, func(item spotify.PlaylistItem) Result {
+		return Result{
+			Title:   item.Track.Track.Name,
+			Artists: artistsToString(item.Track.Track.Artists),
+			URI:     string(item.Track.Track.URI),
+			Album:   item.Track.Track.Album.Name,
+		}
+	})
+}
+
 func (s *Spotify) completeAuth(srv *http.Server) (func(w http.ResponseWriter, r *http.Request), chan (bool)) {
 	auth := spotifyauth.New(
 		spotifyauth.WithClientID(os.Getenv("SPOTIFY_ID")),
 		spotifyauth.WithClientSecret(os.Getenv("SPOTIFY_SECRET")),
 		spotifyauth.WithRedirectURL(redirectURI),
-		spotifyauth.WithScopes(spotifyauth.ScopeUserReadCurrentlyPlaying, spotifyauth.ScopeUserReadPlaybackState, spotifyauth.ScopeUserModifyPlaybackState),
+		spotifyauth.WithScopes(spotifyauth.ScopeUserReadCurrentlyPlaying, spotifyauth.ScopeUserReadPlaybackState, spotifyauth.ScopeUserModifyPlaybackState, spotifyauth.ScopePlaylistReadPrivate),
 	)
 	channel := make(chan bool)
 

@@ -14,6 +14,10 @@ type SongID struct {
 	ID string
 }
 
+type PlaylistID struct {
+	ID string
+}
+
 type PlayerState struct {
 	CurrentSong *Song
 	Queue       []Song
@@ -31,6 +35,14 @@ type Result struct {
 	URI     string
 }
 
+type Playlist struct {
+	Name        string
+	URI         string
+	Description string
+	Tracks      []Result
+	ID          string
+}
+
 // ToolSource provides the interface for types that can be called as LLM tools
 type ToolSource interface {
 	// Searches for a song
@@ -42,6 +54,10 @@ type ToolSource interface {
 	// Gets the song currently playing, the queue, and whether the player is playing or not
 	// Note that when nothing is queued, the currently playing song may show in the queue repeatedly.
 	GetCurrentSong() PlayerState
+	// Gets the playlists for the user
+	GetPlaylists() []Playlist
+	// Gets tracks for a specific playlist
+	GetPlaylistTracks(PlaylistID) []Result
 }
 
 // Source is a source for streaming music and music data
