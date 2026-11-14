@@ -2,8 +2,9 @@ package music
 
 // Song represents song
 type Song struct {
-	Title  string
-	Artist string
+	Title    string
+	Artist   string
+	Duration string
 }
 
 type SongURI struct {
@@ -18,8 +19,14 @@ type PlaylistID struct {
 	ID string
 }
 
+type CurrentSong struct {
+	Song
+	Progress string
+	Duration string
+}
+
 type PlayerState struct {
-	CurrentSong *Song
+	CurrentSong *CurrentSong
 	Queue       []Song
 	Playing     bool
 }
@@ -29,10 +36,11 @@ type GenericResult struct {
 }
 
 type Result struct {
-	Title   string
-	Artists string
-	Album   string
-	URI     string
+	Title    string
+	Artists  string
+	Album    string
+	URI      string
+	Duration string
 }
 
 type Playlist struct {

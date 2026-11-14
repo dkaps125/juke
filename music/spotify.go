@@ -54,10 +54,11 @@ func (s *Spotify) Search(song Song) []Result {
 
 	return utils.Map(results.Tracks.Tracks, func(track spotify.FullTrack) Result {
 		return Result{
-			Title:   track.Name,
-			Artists: artistsToString(track.Artists),
-			URI:     string(track.URI),
-			Album:   track.Album.Name,
+			Title:    track.Name,
+			Artists:  artistsToString(track.Artists),
+			URI:      string(track.URI),
+			Album:    track.Album.Name,
+			Duration: msToDurationString(int(track.Duration)),
 		}
 	})
 }
@@ -94,8 +95,9 @@ func (s *Spotify) getQueue() []Song {
 	var songs []Song
 	for _, song := range queue.Items {
 		songs = append(songs, Song{
-			Title:  song.Name,
-			Artist: artistsToString(song.Artists),
+			Title:    song.Name,
+			Artist:   artistsToString(song.Artists),
+			Duration: msToDurationString(int(song.Duration)),
 		})
 	}
 
@@ -128,6 +130,9 @@ func artistsToString(artists []spotify.SimpleArtist) string {
 }
 
 func (s Spotify) CurrentState() PlayerState {
+	if s.client == nil {
+		return PlayerState{CurrentSong: nil, Playing: false}
+	}
 	curr, _ := s.client.PlayerCurrentlyPlaying(context.Background())
 
 	if curr == nil || curr.Item == nil {
@@ -137,11 +142,15 @@ func (s Spotify) CurrentState() PlayerState {
 		}
 	}
 
-	var currentSong *Song = nil
+	var currentSong *CurrentSong = nil
 	if curr.Item != nil {
-		currentSong = &Song{
-			Title:  curr.Item.Name,
-			Artist: artistsToString(curr.Item.Artists),
+		currentSong = &CurrentSong{
+			Song: Song{
+				Title:  curr.Item.Name,
+				Artist: artistsToString(curr.Item.Artists),
+			},
+			Progress: msToDurationString(int(curr.Progress)),
+			Duration: msToDurationString(int(curr.Item.Duration)),
 		}
 	}
 
