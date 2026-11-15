@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/dkaps125/juke/harness"
 )
 
 type promptFunc func(string)
@@ -105,7 +106,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-	case thinkingMessage:
+	case harness.ThinkingMessage:
 		if !m.thinking {
 			m.talking = false
 			m.thinking = true
@@ -117,7 +118,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.GotoBottom()
 		return m, nil
 
-	case talkingMessage:
+	case harness.TalkingMessage:
 		if !m.talking {
 			m.talking = true
 			m.thinking = false
@@ -129,7 +130,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.GotoBottom()
 		return m, nil
 
-	case completedMessage:
+	case harness.CompletedMessage:
 		m.talking = false
 		m.thinking = false
 		m.toolCalling = false

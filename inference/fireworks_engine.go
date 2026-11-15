@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"iter"
 	"log"
-	"reflect"
 
 	"github.com/ZaguanLabs/fireworks-sdk-go"
 	"github.com/ZaguanLabs/fireworks-sdk-go/types"
-	"github.com/dkaps125/juke/music"
 	"github.com/dkaps125/juke/utils"
 )
 
@@ -45,7 +43,7 @@ func NewFireworksEngine(apiKey string, opts ProviderOptions) *FireworksEngine {
 			},
 		},
 		modelName: opts.ModelName,
-		tools:     toFireworksTools[music.ToolSource]("./music/source.go"),
+		tools:     toFireworksTools(opts.Tools),
 	}
 }
 
@@ -185,34 +183,25 @@ func getOrDefault(v *string, fallback string) string {
 	return *v
 }
 
-func toFireworksTools[T any](file string) []types.SharedParamsChatCompletionTool {
-	v := reflect.TypeFor[T]()
-	numTools := v.NumMethod()
-	toolList := make([]types.SharedParamsChatCompletionTool, numTools)
-	docStrings := getFunctionDocstrings(v.Name(), file)
+func toFireworksTools(tools []Tool) []types.SharedParamsChatCompletionTool {
+	toolList := make([]types.SharedParamsChatCompletionTool, len(tools))
 
-	for i := range numTools {
-		method := v.Method(i)
-		args := make(map[string]any)
+	for i, tool := range tools {
+		args := make(map[string]map[string]any)
 
-		if method.Type.NumIn() > 0 {
-			argStruct := method.Type.In(0) // Relying on struct args
-			numArgs := argStruct.NumField()
-
-			for j := range numArgs {
-				field := argStruct.Field(j)
-				args[field.Name] = map[string]any{
-					"type": field.Type.Name(),
+		if len(tool.Arguments) > 0 {
+			for argName, argType := range tool.Arguments {
+				args[argName] = map[string]any{
+					"type": argType,
 				}
 			}
 		}
 
-		description := docStrings[method.Name]
 		toolList[i] = types.SharedParamsChatCompletionTool{
 			Type: "function",
 			Function: &types.SharedParamsChatCompletionToolFunction{
-				Name:        method.Name,
-				Description: &description,
+				Name:        tool.Name,
+				Description: &tool.Description,
 				Parameters: map[string]any{
 					"type":       "object",
 					"properties": args,

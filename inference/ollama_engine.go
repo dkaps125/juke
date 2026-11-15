@@ -3,14 +3,9 @@ package inference
 import (
 	"context"
 	"encoding/json"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"iter"
 	"log"
-	"reflect"
 
-	"github.com/dkaps125/juke/music"
 	"github.com/dkaps125/juke/utils"
 	"github.com/ollama/ollama/api"
 )
@@ -61,7 +56,7 @@ func NewOllamaEngine(opts ProviderOptions) *OllamaEngine {
 			},
 		},
 		modelName: opts.ModelName,
-		tools:     toOllamaTools[music.ToolSource]("./music/source.go"),
+		tools:     toOllamaTools(opts.Tools),
 	}
 }
 
@@ -151,53 +146,25 @@ func (e *OllamaEngine) runInference() iter.Seq[Message] {
 	}
 }
 
-func getFunctionDocstrings(name, file string) map[string]string {
-	docStrings := make(map[string]string)
+func toOllamaTools(tools []Tool) api.Tools {
+	toolList := make(api.Tools, len(tools))
 
-	fset := token.NewFileSet()
-	pkg, _ := parser.ParseFile(fset, file, nil, parser.ParseComments)
-	ast.Inspect(pkg, func(n ast.Node) bool {
-		ts, ok := n.(*ast.TypeSpec)
-		if !ok || name != ts.Name.Name {
-			return true
-		}
-
-		if it, ok := ts.Type.(*ast.InterfaceType); ok {
-			for _, method := range it.Methods.List {
-				docStrings[method.Names[0].Name] = method.Doc.Text()
-			}
-		}
-		return true
-	})
-
-	return docStrings
-}
-
-func toOllamaTools[T any](file string) api.Tools {
-	v := reflect.TypeFor[T]()
-	numTools := v.NumMethod()
-	tools := make(api.Tools, numTools)
-	docStrings := getFunctionDocstrings(v.Name(), file)
-
-	for i := range numTools {
-		method := v.Method(i)
-
-		argStruct := method.Type.In(0) // Relying on struct args
-		numArgs := argStruct.NumField()
+	for i, tool := range tools {
 		args := api.NewToolPropertiesMap()
 
-		for j := range numArgs {
-			field := argStruct.Field(j)
-			args.Set(field.Name, api.ToolProperty{
-				Type: api.PropertyType{field.Type.Name()},
-			})
+		if len(tool.Arguments) > 0 {
+			for argName, argType := range tool.Arguments {
+				args.Set(argName, api.ToolProperty{
+					Type: api.PropertyType{argType},
+				})
+			}
 		}
 
-		tools[i] = api.Tool{
+		toolList[i] = api.Tool{
 			Type: "function",
 			Function: api.ToolFunction{
-				Name:        method.Name,
-				Description: docStrings[method.Name],
+				Name:        tool.Name,
+				Description: tool.Description,
 				Parameters: api.ToolFunctionParameters{
 					Type:       "object",
 					Properties: args,
@@ -206,5 +173,5 @@ func toOllamaTools[T any](file string) api.Tools {
 		}
 	}
 
-	return tools
+	return toolList
 }

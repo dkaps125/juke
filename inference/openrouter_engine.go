@@ -8,11 +8,6 @@ import (
 
 	"github.com/dkaps125/juke/music"
 	"github.com/revrost/go-openrouter"
-	"github.com/revrost/go-openrouter/jsonschema"
-)
-
-var (
-	openrouterFormat, _ = jsonschema.GenerateSchemaForType(outputType)
 )
 
 type OpenrouterEngine struct {
@@ -46,14 +41,6 @@ func (e *OpenrouterEngine) PromptLLM(userPrompt string, callback func(song []mus
 			Temperature: 0.2,
 			TopP:        0.9,
 			Messages:    e.messages,
-			ResponseFormat: &openrouter.ChatCompletionResponseFormat{
-				Type: openrouter.ChatCompletionResponseFormatTypeJSONSchema,
-				JSONSchema: &openrouter.ChatCompletionResponseFormatJSONSchema{
-					Name:   "songs",
-					Schema: openrouterFormat,
-					Strict: true,
-				},
-			},
 		},
 	)
 

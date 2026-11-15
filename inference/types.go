@@ -1,9 +1,10 @@
 package inference
 
-type SongOutput struct {
-	Artist string
-	Title  string
-	Reason string
+type Tool struct {
+	Name        string
+	Description string
+	// map of arg name to type
+	Arguments map[string]string
 }
 
 type ToolCall struct {
@@ -27,8 +28,5 @@ type Message struct {
 type ProviderOptions struct {
 	ModelName    string
 	SystemPrompt string
+	Tools        []Tool
 }
-
-var (
-	outputType []SongOutput
-)

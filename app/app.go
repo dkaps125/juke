@@ -1,16 +1,27 @@
 package app
 
 import (
-	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"log"
 	"os"
 	"reflect"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/dkaps125/juke/config"
+	"github.com/dkaps125/juke/harness"
 	"github.com/dkaps125/juke/inference"
 	"github.com/dkaps125/juke/music"
 )
+
+type App struct {
+	musicSource   music.Source
+	harness       *harness.Harness
+	program       *tea.Program
+	inferenceChan chan (bool)
+	messageChan   chan (harness.Message) // TODO: message type with discriminator
+}
 
 func GetMusicSource(conf config.Config) music.Source {
 	switch conf.MusicSource {
@@ -21,44 +32,40 @@ func GetMusicSource(conf config.Config) music.Source {
 	}
 }
 
-func GetLLMEngine(conf config.Config, systemPromopt string) inference.Engine {
+func GetLLMEngine(conf config.Config, systemPrompt string, tools []inference.Tool) inference.Engine {
 	switch conf.LLMProvider {
 	// case config.OLLAMA:
 	// 	return inference.NewOllamaEngine(inference.ProviderOptions{
 	// 		ModelName:    conf.ModelName,
-	// 		SystemPrompt: systemPromopt,
+	// 		SystemPrompt: systemPrompt,
 	// 	})
 	// case config.OPENROUTER:
 	// 	return inference.NewOpenrouterEngine(inference.ProviderOptions{
 	// 		ModelName:    conf.ModelName,
-	// 		SystemPrompt: systemPromopt,
+	// 		SystemPrompt: systemPrompt,
 	// 	})
 	case config.FIREWORKS:
 		return inference.NewFireworksEngine(
 			os.Getenv("FIREWORKS_API_KEY"), // TODO: document or config
 			inference.ProviderOptions{
 				ModelName:    conf.ModelName,
-				SystemPrompt: systemPromopt,
+				SystemPrompt: systemPrompt,
+				Tools:        tools,
 			},
 		)
 	case config.GROQ:
 		return inference.NewGroqEngine(inference.ProviderOptions{
 			ModelName:    conf.ModelName,
-			SystemPrompt: systemPromopt,
+			SystemPrompt: systemPrompt,
+			Tools:        tools,
 		})
 	default:
 		return inference.NewOllamaEngine(inference.ProviderOptions{
 			ModelName:    conf.ModelName,
-			SystemPrompt: systemPromopt,
+			SystemPrompt: systemPrompt,
+			Tools:        tools,
 		})
 	}
-}
-
-type App struct {
-	musicSource   music.Source
-	llm           inference.Engine
-	program       *tea.Program
-	inferenceChan chan (bool)
 }
 
 func NewApp(config config.Config) *App {
@@ -66,16 +73,21 @@ func NewApp(config config.Config) *App {
 
 	state := musicSource.CurrentState()
 	systemPrompt := inference.GetSystemPrompt(state)
-	llm := GetLLMEngine(config, systemPrompt)
+	tools := append(toTools[music.ToolSource]("./music/source.go"), toTools[harness.ToolSource]("./harness/source.go")...)
+	llm := GetLLMEngine(config, systemPrompt, tools)
+
+	inferenceChan := make(chan (bool))
+	messageChan := make(chan (harness.Message))
 
 	app := App{
 		musicSource:   musicSource,
-		llm:           llm,
-		inferenceChan: make(chan (bool)),
+		harness:       harness.NewHarness(musicSource, llm, inferenceChan, messageChan),
+		inferenceChan: inferenceChan,
+		messageChan:   messageChan,
 	}
 
 	// Sketchy
-	app.program = tea.NewProgram(initialModel(app.prompt, app.inferenceChan))
+	app.program = tea.NewProgram(initialModel(app.harness.Prompt, app.inferenceChan))
 	return &app
 }
 
@@ -83,91 +95,68 @@ func (a *App) Start() {
 	authChan := a.musicSource.Authenticate()
 	<-authChan
 
+	go a.MessageHandler()
+
 	if _, err := a.program.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (a *App) prompt(prompt string) {
-	toolCalls := make([]inference.ToolCall, 0)
-
-	for message := range a.llm.PromptLLM(prompt) {
-		select {
-		case <-a.inferenceChan:
-			print("")
-			a.program.Send(completedMessage(""))
-			return
-		default:
-			if len(message.Thinking) > 0 {
-				a.program.Send(thinkingMessage(message.Thinking))
-			}
-			if len(message.Content) > 0 {
-				a.program.Send(talkingMessage(message.Content))
-			}
-
-			if len(message.ToolCalls) > 0 {
-				toolCalls = append(toolCalls, message.ToolCalls...)
-			}
-		}
-	}
-
-	// TODO: handle tool call interruption
-	for len(toolCalls) > 0 {
-		toolCallResults := make([]inference.ToolResult, len(toolCalls))
-		for i, tool := range toolCalls {
-			toolCallResults[i] = a.callTool(tool)
-		}
-
-		// Reset tool calls
-		toolCalls = make([]inference.ToolCall, 0)
-
-		for message := range a.llm.ProcessTools(toolCallResults) {
-			select {
-			case <-a.inferenceChan:
-				a.program.Send(completedMessage(""))
-				return
-			default:
-				if len(message.Thinking) > 0 {
-					a.program.Send(thinkingMessage(message.Thinking))
-				}
-				if len(message.Content) > 0 {
-					a.program.Send(talkingMessage(message.Content))
-				}
-
-				if len(message.ToolCalls) > 0 {
-					toolCalls = append(toolCalls, message.ToolCalls...)
-				}
-			}
-		}
-	}
-
-	a.program.Send(completedMessage(""))
-}
-
-func (a *App) callTool(toolCall inference.ToolCall) inference.ToolResult {
-	toolMethod := reflect.ValueOf(a.musicSource).MethodByName(toolCall.Name)
-	var result any
-
-	if toolMethod.Type().NumIn() > 0 {
-		argPtr := reflect.New(toolMethod.Type().In(0))
-		mapToStruct(argPtr.Interface(), toolCall.Arguments)
-
-		arg := reflect.ValueOf(argPtr.Elem().Interface())
-		result = toolMethod.Call([]reflect.Value{arg})[0].Interface()
-	} else {
-		result = toolMethod.Call([]reflect.Value{})[0].Interface()
-	}
-
-	resultBytes, _ := json.Marshal(result)
-
-	return inference.ToolResult{
-		Name:    toolCall.Name,
-		Content: string(resultBytes),
-		ID:      toolCall.ID,
+func (a *App) MessageHandler() {
+	for {
+		a.program.Send(<-a.messageChan)
 	}
 }
 
-func mapToStruct(t interface{}, m map[string]any) {
-	jsonBytes, _ := json.Marshal(m)
-	json.Unmarshal(jsonBytes, t)
+func toTools[T any](file string) []inference.Tool {
+	v := reflect.TypeFor[T]()
+	numTools := v.NumMethod()
+	toolList := make([]inference.Tool, numTools)
+	docStrings := getFunctionDocstrings(v.Name(), file)
+
+	for i := range numTools {
+		method := v.Method(i)
+		args := make(map[string]string)
+
+		if method.Type.NumIn() > 0 {
+			argStruct := method.Type.In(0) // Relying on struct args
+			numArgs := argStruct.NumField()
+
+			for j := range numArgs {
+				field := argStruct.Field(j)
+				args[field.Name] = field.Type.Name()
+			}
+		}
+
+		description := docStrings[method.Name]
+		toolList[i] = inference.Tool{
+			Name:        method.Name,
+			Description: description,
+			Arguments:   args,
+		}
+	}
+
+	return toolList
+}
+
+func getFunctionDocstrings(name, file string) map[string]string {
+	docStrings := make(map[string]string)
+
+	fset := token.NewFileSet()
+	pkg, _ := parser.ParseFile(fset, file, nil, parser.ParseComments)
+	ast.Inspect(pkg, func(n ast.Node) bool {
+		ts, ok := n.(*ast.TypeSpec)
+		if !ok || name != ts.Name.Name {
+			return true
+		}
+
+		if it, ok := ts.Type.(*ast.InterfaceType); ok {
+			for _, method := range it.Methods.List {
+				docStrings[method.Names[0].Name] = method.Doc.Text()
+			}
+		}
+		return true
+	})
+
+	return docStrings
 }

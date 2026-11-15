@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"iter"
 	"os"
-	"reflect"
 
 	"github.com/conneroisu/groq-go"
 	"github.com/conneroisu/groq-go/pkg/tools"
-	"github.com/dkaps125/juke/music"
 	"github.com/dkaps125/juke/utils"
 )
 
@@ -34,7 +32,7 @@ func NewGroqEngine(opts ProviderOptions) *GroqEngine {
 				Content: opts.SystemPrompt,
 			},
 		},
-		tools: toGroqTools[music.ToolSource]("./music/source.go"),
+		tools: toGroqTools(opts.Tools),
 	}
 }
 
@@ -120,31 +118,25 @@ func (e *GroqEngine) runInference() iter.Seq[Message] {
 	}
 }
 
-func toGroqTools[T any](file string) []tools.Tool {
-	v := reflect.TypeFor[T]()
-	numTools := v.NumMethod()
-	toolList := make([]tools.Tool, numTools)
-	docStrings := getFunctionDocstrings(v.Name(), file)
+func toGroqTools(rawTools []Tool) []tools.Tool {
+	toolList := make([]tools.Tool, len(rawTools))
 
-	for i := range numTools {
-		method := v.Method(i)
+	for i, tool := range rawTools {
 
-		argStruct := method.Type.In(0) // Relying on struct args
-		numArgs := argStruct.NumField()
 		args := make(map[string]tools.PropertyDefinition)
-
-		for j := range numArgs {
-			field := argStruct.Field(j)
-			args[field.Name] = tools.PropertyDefinition{
-				Type: field.Type.Name(),
+		if len(tool.Arguments) > 0 {
+			for argName, argType := range tool.Arguments {
+				args[argName] = tools.PropertyDefinition{
+					Type: argType,
+				}
 			}
 		}
 
 		toolList[i] = tools.Tool{
 			Type: "function",
 			Function: tools.FunctionDefinition{
-				Name:        method.Name,
-				Description: docStrings[method.Name],
+				Name:        tool.Name,
+				Description: tool.Description,
 				Parameters: tools.FunctionParameters{
 					Type:       "object",
 					Properties: args,
