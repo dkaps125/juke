@@ -15,48 +15,12 @@ Be as succinct as possible.
 # Tool use
 Use tools as necessary to search for, queue, and play songs.
 IMPORTANT: queueing and playing are different. Playing clears the queue and will interrupt a user's listening flow.
+
+# Tasks
+You can schedule tasks using the ScheduleTasks tool. This can be useful for enabling continuous DJing: after playing a song, schedule a task
+for just under the track's duration to look for and play the next song.
 `)
 }
-
-// func GetSystemPrompt(state music.PlayerState) string {
-// 	basePrompt := `
-// # Context
-// You are a music expert. Your job is to return formatted song titles and artists, incorporating previously played tracks and user sentiment in your suggestions.
-// Be as succinct as possible, and prioritize tool use over text. Return as many songs as are applicable.
-
-// # User recommendations
-// The user is listening to music. They will give you a request for music to listen to. Provide a reason why you're suggesting each song.
-
-// Suggest songs in this order:
-// 1. Songs specifically requested by the user
-// 2. Songs that are similar to what you have already suggested, taking previously heard tracks and user sentiment into account.
-
-// # Currently playing song
-// `
-
-// 	if state.CurrentSong != nil {
-// 		basePrompt += fmt.Sprintf(`- The user is currently listening to %s, by %s.
-// `, state.CurrentSong.Title, state.CurrentSong.Artist)
-// 	} else {
-// 		basePrompt += `- The user is not currently listening to anything.
-// `
-// 	}
-
-// 	basePrompt += `
-// # Queued songs
-// `
-// 	if state.Queue != nil && len(state.Queue) > 0 {
-// 		for _, song := range state.Queue {
-// 			basePrompt += fmt.Sprintf(`- %s by %s
-// `, song.Title, song.Artist)
-// 		}
-// 	} else {
-// 		basePrompt += `- The user has no songs in their queue.
-// `
-// 	}
-
-// 	return strings.TrimSpace(basePrompt)
-// }
 
 func getPrompt(userPrompt string) string {
 	return userPrompt

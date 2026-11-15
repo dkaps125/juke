@@ -7,6 +7,10 @@ type Song struct {
 	Duration string
 }
 
+type Query struct {
+	Query string
+}
+
 type SongURI struct {
 	URI string
 }
@@ -55,6 +59,8 @@ type Playlist struct {
 type ToolSource interface {
 	// Searches for a song
 	Search(Song) []Result
+	// Searches for playlists
+	SearchPlaylists(Query) []Playlist
 	// Plays a song
 	PlaySong(SongURI) GenericResult
 	// Queues a song

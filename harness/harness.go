@@ -3,7 +3,6 @@ package harness
 import (
 	"encoding/json"
 	"reflect"
-	"time"
 
 	"github.com/dkaps125/juke/inference"
 	"github.com/dkaps125/juke/music"
@@ -25,25 +24,12 @@ func NewHarness(musicSource music.Source, llm inference.Engine, inferenceChan ch
 	}
 }
 
-func (h *Harness) ScheduleTask(prompt Prompt) bool {
-	duration, _ := time.ParseDuration(prompt.TimeToWait)
-	timer := time.After(duration)
-
-	go func() {
-		<-timer
-		h.Prompt(prompt.Prompt)
-	}()
-
-	return true
-}
-
 func (h *Harness) Prompt(prompt string) {
 	toolCalls := make([]inference.ToolCall, 0)
 
 	for message := range h.llm.PromptLLM(prompt) {
 		select {
 		case <-h.inferenceChan:
-			print("")
 			h.messageChan <- CompletedMessage("")
 			return
 		default:

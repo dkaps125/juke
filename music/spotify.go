@@ -63,6 +63,27 @@ func (s *Spotify) Search(song Song) []Result {
 	})
 }
 
+func (s *Spotify) SearchPlaylists(query Query) []Playlist {
+	results, err := s.client.Search(context.Background(), query.Query, spotify.SearchTypePlaylist)
+	if err != nil {
+		log.Println(err.Error())
+		return nil
+	}
+
+	if results.Playlists == nil || results.Playlists.Playlists == nil || len(results.Playlists.Playlists) == 0 {
+		return nil
+	}
+
+	return utils.Map(results.Playlists.Playlists, func(plist spotify.SimplePlaylist) Playlist {
+		return Playlist{
+			Name:        plist.Name,
+			Description: plist.Description,
+			URI:         string(plist.URI),
+			ID:          string(plist.ID),
+		}
+	})
+}
+
 func (s *Spotify) PlaySong(songUri SongURI) GenericResult {
 	uri := spotify.URI(songUri.URI)
 
