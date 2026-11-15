@@ -23,10 +23,19 @@ type PlaylistID struct {
 	ID string
 }
 
+type DeviceID struct {
+	ID string
+}
+
 type CurrentSong struct {
 	Song
 	Progress string
 	Duration string
+}
+
+type Device struct {
+	ID   string
+	Name string
 }
 
 type PlayerState struct {
@@ -72,6 +81,10 @@ type ToolSource interface {
 	GetPlaylists() []Playlist
 	// Gets tracks for a specific playlist
 	GetPlaylistTracks(PlaylistID) []Result
+	// Lists the available devices that music can be played on
+	ListAvailableDevices() []Device
+	// Starts playing on a specific device. Will continue playing whatever song was played last -- can be called without calling PlaySong.
+	StartPlayingOnDevice(DeviceID) GenericResult
 }
 
 // Source is a source for streaming music and music data

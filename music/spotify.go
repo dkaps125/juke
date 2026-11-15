@@ -107,6 +107,26 @@ func (s *Spotify) QueueSong(songID SongID) GenericResult {
 	}
 }
 
+func (s *Spotify) ListAvailableDevices() []Device {
+	devices, _ := s.client.PlayerDevices(context.Background())
+	return utils.Map(devices, func(device spotify.PlayerDevice) Device {
+		return Device{
+			ID:   device.ID.String(),
+			Name: device.Name,
+		}
+	})
+}
+
+func (s *Spotify) StartPlayingOnDevice(id DeviceID) GenericResult {
+	s.client.PlayOpt(context.Background(), &spotify.PlayOptions{
+		DeviceID: (*spotify.ID)(&id.ID),
+	})
+
+	return GenericResult{
+		Status: "Success",
+	}
+}
+
 func (s *Spotify) getQueue() []Song {
 	queue, _ := s.client.GetQueue(context.Background())
 	if queue == nil || len(queue.Items) == 0 {
