@@ -17,18 +17,22 @@ type Harness struct {
 	llm           inference.Engine
 	inferenceChan chan (bool)
 	messageChan   chan (Message)
+
+	tasks map[string]Task
 }
 
 func NewHarness(musicSource music.Source, config config.Config, inferenceChan chan (bool), messageChan chan (Message)) *Harness {
 	systemPrompt := inference.GetSystemPrompt()
 	tools := append(toTools[music.ToolSource]("./music/source.go"), toTools[ToolSource]("./harness/source.go")...)
 	llm := getLLMEngine(config, systemPrompt, tools)
+	tasks := make(map[string]Task)
 
 	return &Harness{
 		musicSource,
 		llm,
 		inferenceChan,
 		messageChan,
+		tasks,
 	}
 }
 

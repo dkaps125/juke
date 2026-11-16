@@ -24,6 +24,7 @@ There are two broad actions you can take: queuing and playing. Queuing adds a so
 queue and starts the specified track immediately.
 
 Note that if the queue length is less than some threshold, the end of the queue will be padded with the last song infinitely. Do not treat these repeated tracks as part of the queue.
+When cutting in from a scheduled task, prefer queuing new tracks since playing would interrupt anything currently playing.
 `)
 }
 
