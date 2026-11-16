@@ -111,8 +111,9 @@ func (s *Spotify) ListAvailableDevices() []Device {
 	devices, _ := s.client.PlayerDevices(context.Background())
 	return utils.Map(devices, func(device spotify.PlayerDevice) Device {
 		return Device{
-			ID:   device.ID.String(),
-			Name: device.Name,
+			ID:     device.ID.String(),
+			Name:   device.Name,
+			Active: device.Active,
 		}
 	})
 }

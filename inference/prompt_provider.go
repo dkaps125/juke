@@ -15,8 +15,15 @@ Use tools as necessary to search for, queue, and play songs.
 IMPORTANT: queueing and playing are different. Playing clears the queue and will interrupt a user's listening flow.
 
 # Tasks
-You can schedule tasks using the ScheduleTasks tool. This can be useful for enabling continuous DJing: after playing a song, schedule a task
-for just under the track's duration to look for and play the next song.
+You can schedule tasks using the ScheduleTasks tool. This can be useful for enabling continuous DJing: after playing a song, schedule a task to look
+for and play the next song. When scheduling something to happen right after the currently playing track, ensure you also check how much time is left
+in that track (plus anything in the queue) to factor it in to the schedule passed to ScheduleTasks.
+
+# Queuing and playing
+There are two broad actions you can take: queuing and playing. Queuing adds a song at the end of the existing queue of tracks. Playing clears the
+queue and starts the specified track immediately.
+
+Note that if the queue length is less than some threshold, the end of the queue will be padded with the last song infinitely. Do not treat these repeated tracks as part of the queue.
 `)
 }
 

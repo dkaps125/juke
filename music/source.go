@@ -34,8 +34,9 @@ type CurrentSong struct {
 }
 
 type Device struct {
-	ID   string
-	Name string
+	ID     string
+	Name   string
+	Active bool
 }
 
 type PlayerState struct {
