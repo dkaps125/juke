@@ -2,11 +2,9 @@ package inference
 
 import (
 	"strings"
-
-	"github.com/dkaps125/juke/music"
 )
 
-func GetSystemPrompt(state music.PlayerState) string {
+func GetSystemPrompt() string {
 	return strings.TrimSpace(`
 # Context
 You are a music expert. Your job is to discuss and make recommendations for music that the user should listen to.

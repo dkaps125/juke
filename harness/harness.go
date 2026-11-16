@@ -1,9 +1,13 @@
 package harness
 
 import (
-	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
 	"reflect"
 
+	"github.com/dkaps125/juke/config"
 	"github.com/dkaps125/juke/inference"
 	"github.com/dkaps125/juke/music"
 )
@@ -15,7 +19,11 @@ type Harness struct {
 	messageChan   chan (Message)
 }
 
-func NewHarness(musicSource music.Source, llm inference.Engine, inferenceChan chan (bool), messageChan chan (Message)) *Harness {
+func NewHarness(musicSource music.Source, config config.Config, inferenceChan chan (bool), messageChan chan (Message)) *Harness {
+	systemPrompt := inference.GetSystemPrompt()
+	tools := append(toTools[music.ToolSource]("./music/source.go"), toTools[ToolSource]("./harness/source.go")...)
+	llm := getLLMEngine(config, systemPrompt, tools)
+
 	return &Harness{
 		musicSource,
 		llm,
@@ -24,85 +32,91 @@ func NewHarness(musicSource music.Source, llm inference.Engine, inferenceChan ch
 	}
 }
 
-func (h *Harness) Prompt(prompt string) {
-	toolCalls := make([]inference.ToolCall, 0)
-
-	for message := range h.llm.PromptLLM(prompt) {
-		select {
-		case <-h.inferenceChan:
-			h.messageChan <- CompletedMessage("")
-			return
-		default:
-			if len(message.Thinking) > 0 {
-				h.messageChan <- ThinkingMessage(message.Thinking)
-			}
-			if len(message.Content) > 0 {
-				h.messageChan <- TalkingMessage(message.Content)
-			}
-
-			if len(message.ToolCalls) > 0 {
-				toolCalls = append(toolCalls, message.ToolCalls...)
-			}
-		}
-	}
-
-	// TODO: handle tool call interruption
-	for len(toolCalls) > 0 {
-		toolCallResults := make([]inference.ToolResult, len(toolCalls))
-		for i, tool := range toolCalls {
-			toolCallResults[i] = h.callTool(tool)
-		}
-
-		// Reset tool calls
-		toolCalls = make([]inference.ToolCall, 0)
-
-		for message := range h.llm.ProcessTools(toolCallResults) {
-			select {
-			case <-h.inferenceChan:
-				h.messageChan <- CompletedMessage("")
-				return
-			default:
-				if len(message.Thinking) > 0 {
-					h.messageChan <- ThinkingMessage(message.Thinking)
-				}
-				if len(message.Content) > 0 {
-					h.messageChan <- TalkingMessage(message.Content)
-				}
-
-				if len(message.ToolCalls) > 0 {
-					toolCalls = append(toolCalls, message.ToolCalls...)
-				}
-			}
-		}
-	}
-
-	h.messageChan <- CompletedMessage("")
-}
-
-func (h *Harness) callTool(toolCall inference.ToolCall) inference.ToolResult {
-	toolMethod := reflect.ValueOf(h).MethodByName(toolCall.Name)
-	var result any
-
-	if toolMethod.Type().NumIn() > 0 {
-		argPtr := reflect.New(toolMethod.Type().In(0))
-		mapToStruct(argPtr.Interface(), toolCall.Arguments)
-
-		arg := reflect.ValueOf(argPtr.Elem().Interface())
-		result = toolMethod.Call([]reflect.Value{arg})[0].Interface()
-	} else {
-		result = toolMethod.Call([]reflect.Value{})[0].Interface()
-	}
-
-	resultBytes, _ := json.Marshal(result)
-
-	return inference.ToolResult{
-		Name:    toolCall.Name,
-		Content: string(resultBytes),
-		ID:      toolCall.ID,
+func getLLMEngine(conf config.Config, systemPrompt string, tools []inference.Tool) inference.Engine {
+	switch conf.LLMProvider {
+	case config.OLLAMA:
+		return inference.NewOllamaEngine(inference.ProviderOptions{
+			ModelName:    conf.ModelName,
+			SystemPrompt: systemPrompt,
+		})
+	// case config.OPENROUTER:
+	// 	return inference.NewOpenrouterEngine(inference.ProviderOptions{
+	// 		ModelName:    conf.ModelName,
+	// 		SystemPrompt: systemPrompt,
+	// 	})
+	case config.FIREWORKS:
+		return inference.NewFireworksEngine(
+			os.Getenv("FIREWORKS_API_KEY"), // TODO: document or config
+			inference.ProviderOptions{
+				ModelName:    conf.ModelName,
+				SystemPrompt: systemPrompt,
+				Tools:        tools,
+			},
+		)
+	case config.GROQ:
+		return inference.NewGroqEngine(inference.ProviderOptions{
+			ModelName:    conf.ModelName,
+			SystemPrompt: systemPrompt,
+			Tools:        tools,
+		})
+	default:
+		return inference.NewOllamaEngine(inference.ProviderOptions{
+			ModelName:    conf.ModelName,
+			SystemPrompt: systemPrompt,
+			Tools:        tools,
+		})
 	}
 }
 
-func mapToStruct(t interface{}, m map[string]any) {
-	jsonBytes, _ := json.Marshal(m)
-	json.Unmarshal(jsonBytes, t)
+func toTools[T any](file string) []inference.Tool {
+	v := reflect.TypeFor[T]()
+	numTools := v.NumMethod()
+	toolList := make([]inference.Tool, numTools)
+	docStrings := getFunctionDocstrings(v.Name(), file)
+
+	for i := range numTools {
+		method := v.Method(i)
+		args := make(map[string]string)
+
+		if method.Type.NumIn() > 0 {
+			argStruct := method.Type.In(0) // Relying on struct args
+			numArgs := argStruct.NumField()
+
+			for j := range numArgs {
+				field := argStruct.Field(j)
+				args[field.Name] = field.Type.Name()
+			}
+		}
+
+		description := docStrings[method.Name]
+		toolList[i] = inference.Tool{
+			Name:        method.Name,
+			Description: description,
+			Arguments:   args,
+		}
+	}
+
+	return toolList
+}
+
+func getFunctionDocstrings(name, file string) map[string]string {
+	docStrings := make(map[string]string)
+
+	fset := token.NewFileSet()
+	pkg, _ := parser.ParseFile(fset, file, nil, parser.ParseComments)
+	ast.Inspect(pkg, func(n ast.Node) bool {
+		ts, ok := n.(*ast.TypeSpec)
+		if !ok || name != ts.Name.Name {
+			return true
+		}
+
+		if it, ok := ts.Type.(*ast.InterfaceType); ok {
+			for _, method := range it.Methods.List {
+				docStrings[method.Names[0].Name] = method.Doc.Text()
+			}
+		}
+		return true
+	})
+
+	return docStrings
 }
