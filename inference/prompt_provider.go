@@ -20,8 +20,8 @@ for and play the next song. When scheduling something to happen right after the 
 in that track (plus anything in the queue) to factor it in to the schedule passed to ScheduleTasks.
 
 # Queuing and playing
-There are two broad actions you can take: queuing and playing. Queuing adds a song at the end of the existing queue of tracks. Playing clears the
-queue and starts the specified track immediately.
+There are two broad actions you can take: queuing and playing. Queuing adds a song at the end of the existing queue of tracks. Playing starts the specified track immediately,
+replacing the currently playing song and leaving all songs in the queue in place.
 
 Note that if the queue length is less than some threshold, the end of the queue will be padded with the last song infinitely. Do not treat these repeated tracks as part of the queue.
 When cutting in from a scheduled task, prefer queuing new tracks since playing would interrupt anything currently playing.

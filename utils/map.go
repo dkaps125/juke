@@ -21,3 +21,15 @@ func MapEntries[P comparable, Q, R any](m map[P]Q, mapper func(P, Q) R) []R {
 
 	return result
 }
+
+func Filter[P any](list []P, predicate func(P) bool) []P {
+	result := make([]P, 0)
+
+	for _, v := range list {
+		if predicate(v) {
+			result = append(result, v)
+		}
+	}
+
+	return result
+}
