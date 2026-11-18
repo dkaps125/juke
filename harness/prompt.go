@@ -8,6 +8,12 @@ import (
 )
 
 func (h *Harness) Prompt(prompt string) {
+	slashCommands := h.GetSlashCommands()
+	if command, ok := slashCommands[prompt]; ok {
+		command(h)
+		return
+	}
+
 	toolCalls := make([]inference.ToolCall, 0)
 
 	for message := range h.llm.PromptLLM(prompt) {

@@ -33,7 +33,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		}
 	} else {
 		fn = func(s ...string) string {
-			return d.unselectedItemStyle.Render(fmt.Sprintf("%d. %s", index+1, i))
+			return d.unselectedItemStyle.Render(fmt.Sprintf("   %s", i))
 		}
 	}
 

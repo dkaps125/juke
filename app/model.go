@@ -14,8 +14,6 @@ import (
 	"github.com/dkaps125/juke/utils"
 )
 
-var items = []list.Item{item("/compact"), item("/play"), item("/pause")}
-
 type model struct {
 	viewport         viewport.Model
 	messages         []string
@@ -30,9 +28,11 @@ type model struct {
 
 	onPrompt func(string)
 	stopChan chan (bool)
+
+	slashCommands []list.Item
 }
 
-func initialModel(onPrompt func(string), stopChan chan (bool)) model {
+func initialModel(onPrompt func(string), stopChan chan (bool), slashCommands []string) model {
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
 	ta.SetVirtualCursor(false)
@@ -56,6 +56,9 @@ func initialModel(onPrompt func(string), stopChan chan (bool)) model {
 	vp.KeyMap.Left.SetEnabled(false)
 	vp.KeyMap.Right.SetEnabled(false)
 
+	items := utils.Map(slashCommands, func(command string) list.Item {
+		return item(command)
+	})
 	scl := list.New(items, itemDelegate{lipgloss.NewStyle().Foreground(lipgloss.Color("#3C3C3C"))}, 20, 0)
 	scl.SetShowTitle(false)
 	scl.SetShowStatusBar(false)
@@ -73,6 +76,7 @@ func initialModel(onPrompt func(string), stopChan chan (bool)) model {
 		err:              nil,
 		onPrompt:         onPrompt,
 		stopChan:         stopChan,
+		slashCommands:    items,
 	}
 }
 
@@ -139,7 +143,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, cmd
 				}
 
-				m.slashCommandList.SetItems(utils.Filter(items, func(item list.Item) bool {
+				m.slashCommandList.SetItems(utils.Filter(m.slashCommands, func(item list.Item) bool {
 					return strings.HasPrefix(fmt.Sprintf("%s", item), textAreaValue)
 				}))
 
@@ -209,6 +213,6 @@ func (m model) hideCommandList() (tea.Model, tea.Cmd) {
 	var listCmd tea.Cmd
 	m.viewport.SetHeight(m.viewport.Height() + m.slashCommandList.Height())
 	m.slashCommandList.SetHeight(0)
-	m.slashCommandList.SetItems(items) // Reset items
+	m.slashCommandList.SetItems(m.slashCommands) // Reset items
 	return m, listCmd
 }

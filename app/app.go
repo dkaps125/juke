@@ -10,11 +10,10 @@ import (
 )
 
 type App struct {
-	musicSource   music.Source
-	harness       *harness.Harness
-	program       *tea.Program
-	inferenceChan chan (bool)
-	messageChan   chan (harness.Message) // TODO: message type with discriminator
+	musicSource music.Source
+	harness     *harness.Harness
+	program     *tea.Program
+	messageChan chan (harness.Message) // TODO: message type with discriminator
 }
 
 func NewApp(config config.Config) *App {
@@ -22,16 +21,16 @@ func NewApp(config config.Config) *App {
 
 	inferenceChan := make(chan (bool))
 	messageChan := make(chan (harness.Message))
+	h := harness.NewHarness(musicSource, config, inferenceChan, messageChan)
 
 	app := App{
-		musicSource:   musicSource,
-		harness:       harness.NewHarness(musicSource, config, inferenceChan, messageChan),
-		inferenceChan: inferenceChan,
-		messageChan:   messageChan,
+		musicSource: musicSource,
+		harness:     h,
+		messageChan: messageChan,
 	}
 
 	// Sketchy
-	app.program = tea.NewProgram(initialModel(app.harness.Prompt, app.inferenceChan))
+	app.program = tea.NewProgram(initialModel(app.harness.Prompt, inferenceChan, h.GetSlashCommandKeys()))
 	return &app
 }
 
